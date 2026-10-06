@@ -16,6 +16,7 @@ import type { TaskType } from "@/lib/models";
 
 const icons: Record<TaskType, LucideIcon> = {
   math: Calculator,
+  chinese: BookOpen,
   reading: BookOpen,
   english: Languages,
   writing: PenLine,
@@ -128,3 +129,4 @@ export function QuietLandscape() {
     </svg>
   );
 }
+

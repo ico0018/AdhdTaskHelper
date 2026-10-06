@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const taskTypes = [
   "math",
+  "chinese",
   "reading",
   "english",
   "writing",
@@ -140,6 +141,7 @@ export type TaskInput = Pick<
 
 export const typeLabels: Record<TaskType, string> = {
   math: "数学",
+  chinese: "语文",
   reading: "阅读",
   english: "英语",
   writing: "写作",
@@ -148,6 +150,7 @@ export const typeLabels: Record<TaskType, string> = {
 };
 export const checkQuestions: Record<TaskType, string> = {
   math: "有没有漏题？",
+  chinese: "有没有漏题或漏字？",
   reading: "能说出刚才读了什么吗？",
   english: "有没有读完今天的内容？",
   writing: "有没有漏字或标点？",
