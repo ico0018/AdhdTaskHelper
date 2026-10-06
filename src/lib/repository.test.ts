@@ -81,3 +81,4 @@ describe("local persistence", () => {
     expect(repository.getSnapshot()?.tasks).toHaveLength(5);
   });
 });
+

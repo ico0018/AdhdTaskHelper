@@ -109,6 +109,9 @@ export default function Parent({
                 </span>
               </div>
               <p className="parent-materials">
+                可选时间：{task.timeOptions.join(" / ")} 分钟
+              </p>
+              <p className="parent-materials">
                 准备材料：
                 {task.materials.length ? task.materials.join("、") : "未设置"}
               </p>
@@ -233,7 +236,12 @@ export default function Parent({
                   已检查材料：
                   {shown.preparation.materials.join("、") || "无材料"}
                 </p>
-                <p>深呼吸：已完成 3 秒</p>
+                <p>
+                  深呼吸：
+                  {shown.preparation.guidedBreaths
+                    ? `已完成 ${shown.preparation.guidedBreaths} 次`
+                    : "旧版准备记录"}
+                </p>
                 <p>
                   如厕和喝水：
                   {shown.preparation.bathroomAndWaterChecked
@@ -268,3 +276,4 @@ export default function Parent({
     </div>
   );
 }
+

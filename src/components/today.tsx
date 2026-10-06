@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, Check, ChevronDown } from "lucide-react";
 import type { Database, Task } from "@/lib/models";
 import { sessionForTask, tasksForDate } from "@/lib/flow";
+import TaskJourney from "./task-journey";
 import { QuietLandscape, TaskIcon } from "./ui";
 
 export default function Today({
@@ -30,6 +31,7 @@ export default function Today({
         <h1>今天做什么？</h1>
         <QuietLandscape />
       </section>
+      <TaskJourney db={db} date={date} />
       <section className="task-section" aria-label="今天的任务">
         {!tasks.length ? (
           <div className="empty-state">
@@ -78,3 +80,4 @@ export default function Today({
     </div>
   );
 }
+

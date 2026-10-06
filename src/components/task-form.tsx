@@ -7,6 +7,7 @@ import {
   type TaskType,
   taskTypes,
   typeLabels,
+  timeOptionsSchema,
 } from "@/lib/models";
 import { Modal } from "./ui";
 
@@ -24,6 +25,10 @@ export default function TaskForm({
   const [type, setType] = useState<TaskType>(task?.type ?? "math");
   const [priority, setPriority] = useState(task?.priority ?? 2);
   const [materials, setMaterials] = useState(task?.materials.join("\n") ?? "");
+  const [timeOptions, setTimeOptions] = useState(
+    (task?.timeOptions ?? [10, 20, 30]).map(String),
+  );
+  const [timeError, setTimeError] = useState("");
   const [materialError, setMaterialError] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -39,7 +44,23 @@ export default function TaskForm({
       setMaterialError("最多 30 项材料，每项最多 40 字。");
       return;
     }
-    if (onSave({ title, description, type, priority, materials: list }))
+    const parsedTimes = timeOptionsSchema.safeParse(
+      timeOptions.map((value) => Number(value)),
+    );
+    if (!parsedTimes.success) {
+      setTimeError("请设置三个不同的整数时间，每个 1–180 分钟。");
+      return;
+    }
+    if (
+      onSave({
+        title,
+        description,
+        type,
+        priority,
+        materials: list,
+        timeOptions: [...parsedTimes.data].sort((a, b) => a - b),
+      })
+    )
       onClose();
   };
   return (
@@ -89,6 +110,34 @@ export default function TaskForm({
             <option value={3}>稍后做</option>
           </select>
         </label>
+        <fieldset className="time-options-fieldset">
+          <legend>孩子可选的时间（分钟）</legend>
+          <div className="parent-time-options">
+            {timeOptions.map((value, index) => (
+              <label key={index}>
+                选项 {index + 1}
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={180}
+                  step={1}
+                  required
+                  value={value}
+                  onChange={(e) => {
+                    setTimeOptions(
+                      timeOptions.map((item, i) =>
+                        i === index ? e.target.value : item,
+                      ),
+                    );
+                    setTimeError("");
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+          {timeError && <p role="alert">{timeError}</p>}
+        </fieldset>
         <label>
           准备材料
           <textarea
@@ -113,3 +162,4 @@ export default function TaskForm({
     </Modal>
   );
 }
+

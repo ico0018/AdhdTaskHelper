@@ -118,9 +118,10 @@ export default function NoraApp({
     content = (
       <Result
         session={session}
+        db={db}
         commit={(transform) => {
           const success = commit(transform);
-          if (success) {
+          if (success && !activeSession(repository.getSnapshot()!)) {
             setSelected(null);
             const current = repository.getSnapshot()!;
             const tasks = tasksForDate(current, today);
@@ -234,3 +235,4 @@ export default function NoraApp({
     </div>
   );
 }
+

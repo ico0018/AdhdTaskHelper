@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Home } from "lucide-react";
+import { Check } from "lucide-react";
 import type { Database } from "@/lib/models";
 import { dailyReflection, sessionForTask, tasksForDate } from "@/lib/flow";
+import TaskJourney from "./task-journey";
 import { BackButton, TaskIcon, formatMinutes } from "./ui";
 
 export default function DailySummary({
@@ -19,6 +20,10 @@ export default function DailySummary({
   const tasks = tasksForDate(db, date);
   const sessions = db.sessions.filter((s) => s.date === date && s.completed);
   const done = tasks.filter((t) => sessionForTask(db, t.id)?.completed).length;
+  const overrunTasks = tasks.filter((task) => {
+    const session = sessionForTask(db, task.id);
+    return session && session.actualMinutes > session.estimatedMinutes;
+  });
   const allDone = tasks.length > 0 && done === tasks.length;
   const reflection = db.reflections.find(
     (r) => r.date === date && r.kind === "daily",
@@ -27,17 +32,7 @@ export default function DailySummary({
     <div className="decision-screen">
       <BackButton onClick={onBack} />
       <div className="decision-content daily-summary">
-        <div className="finish-path">
-          {tasks.map((task) => (
-            <span
-              key={task.id}
-              className={`finish-dot ${sessionForTask(db, task.id)?.completed ? "filled" : ""}`}
-            >
-              {sessionForTask(db, task.id)?.completed && <Check size={13} />}
-            </span>
-          ))}
-          <Home size={30} strokeWidth={1.4} />
-        </div>
+        <TaskJourney db={db} date={date} />
         <h1>{allDone ? "今天完成啦" : "今日任务"}</h1>
         <div className="daily-stats">
           <div>
@@ -58,7 +53,7 @@ export default function DailySummary({
             <span>今天总学习时间</span>
           </div>
         </div>
-        {allDone && (
+        {allDone && overrunTasks.length > 0 && (
           <div className="daily-question">
             <h2>
               今天哪件事比你想象中
@@ -66,7 +61,7 @@ export default function DailySummary({
               花的时间更多？
             </h2>
             <div className="reason-list">
-              {tasks.map((task) => (
+              {overrunTasks.map((task) => (
                 <button
                   className={`choice-button task-choice ${reflection?.moreTimeTaskId === task.id ? "selected" : ""}`}
                   key={task.id}
@@ -100,3 +95,4 @@ export default function DailySummary({
     </div>
   );
 }
+

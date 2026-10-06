@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import type { Database, Task, TaskPreparation } from "@/lib/models";
+import {
+  BREATH_CYCLE_MS,
+  REQUIRED_BREATHS,
+  breathingProgress,
+  visibleElapsed,
+} from "@/lib/breathing";
 import { startPreparedTask } from "@/lib/flow";
 import { BackButton, TaskIcon } from "./ui";
 import QuietPet from "./quiet-pet";
@@ -26,20 +32,37 @@ export default function Preparation({
   const [breathCompletedAt, setBreathCompletedAt] = useState<number | null>(
     null,
   );
-  const [remaining, setRemaining] = useState(3);
+  const [run, setRun] = useState({ id: 0, target: REQUIRED_BREATHS });
+  const [elapsed, setElapsed] = useState(0);
+  const [guidedBreaths, setGuidedBreaths] = useState(0);
+  const [guidedBreathingMs, setGuidedBreathingMs] = useState(0);
+  const guide = breathingProgress(elapsed, run.target);
   const allReady =
     estimate !== null &&
+    task.timeOptions.includes(estimate) &&
     task.materials.every((m) => checked.includes(m)) &&
     (!bathroomReminder || bathroomReady);
 
   useEffect(() => {
     if (breathStartedAt === null || breathCompletedAt !== null) return;
+    let counted = 0;
+    let previous = performance.now();
+    let visible = !document.hidden;
+    let finished = false;
     const update = () => {
-      const now = Date.now();
-      setRemaining(
-        Math.max(0, Math.ceil((breathStartedAt + 3000 - now) / 1000)),
-      );
-      if (now >= breathStartedAt + 3000) setBreathCompletedAt(now);
+      const now = performance.now();
+      counted = visibleElapsed(counted, previous, now, visible);
+      previous = now;
+      visible = !document.hidden;
+      setElapsed(counted);
+      if (!finished && counted >= run.target * BREATH_CYCLE_MS) {
+        finished = true;
+        setGuidedBreaths((count) => count + run.target);
+        setGuidedBreathingMs(
+          (duration) => duration + run.target * BREATH_CYCLE_MS,
+        );
+        setBreathCompletedAt(Date.now());
+      }
     };
     const interval = setInterval(update, 100);
     document.addEventListener("visibilitychange", update);
@@ -47,7 +70,7 @@ export default function Preparation({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [breathStartedAt, breathCompletedAt]);
+  }, [breathStartedAt, breathCompletedAt, run]);
 
   return (
     <div className="decision-screen preparation-screen">
@@ -59,7 +82,13 @@ export default function Preparation({
                 setPhase("materials");
                 setBreathStartedAt(null);
                 setBreathCompletedAt(null);
-                setRemaining(3);
+                setElapsed(0);
+                setGuidedBreaths(0);
+                setGuidedBreathingMs(0);
+                setRun((current) => ({
+                  id: current.id + 1,
+                  target: REQUIRED_BREATHS,
+                }));
               }
         }
         label={phase === "materials" ? "返回任务" : "返回准备"}
@@ -74,7 +103,7 @@ export default function Preparation({
             )}
             <h2>需要多久？</h2>
             <div className="estimate-grid">
-              {[10, 20, 30].map((m) => (
+              {task.timeOptions.map((m) => (
                 <button
                   className={`estimate-option ${estimate === m ? "selected" : ""}`}
                   aria-pressed={estimate === m}
@@ -127,7 +156,13 @@ export default function Preparation({
                 setPhase("breathing");
                 setBreathStartedAt(Date.now());
                 setBreathCompletedAt(null);
-                setRemaining(3);
+                setElapsed(0);
+                setGuidedBreaths(0);
+                setGuidedBreathingMs(0);
+                setRun((current) => ({
+                  id: current.id + 1,
+                  target: REQUIRED_BREATHS,
+                }));
               }}
             >
               准备好了
@@ -137,17 +172,25 @@ export default function Preparation({
         ) : (
           <section className="breathing-preparation">
             <h1>{breathCompletedAt === null ? "深呼吸" : "准备开始"}</h1>
+            <p className="breath-count">
+              {breathCompletedAt === null
+                ? `第 ${guide.breath} 次 / ${run.target} 次`
+                : "深呼吸完成了"}
+            </p>
             <QuietPet />
             <div className="breathing-visual">
               <div
                 className={`breathing-orb ${breathCompletedAt !== null ? "settled" : ""}`}
                 aria-hidden="true"
+                style={{
+                  transform: `scale(${breathCompletedAt === null ? guide.scale : 0.8})`,
+                }}
               />
               <div className="breathing-guide" aria-live="polite">
                 {breathCompletedAt === null ? (
                   <>
-                    <strong>{remaining}</strong>
-                    <span>{remaining >= 2 ? "慢慢吸气" : "轻轻呼气"}</span>
+                    <strong>{guide.seconds}</strong>
+                    <span>{guide.cue}</span>
                   </>
                 ) : (
                   <Check size={28} />
@@ -159,6 +202,18 @@ export default function Preparation({
               <br />
               有困难再来找我，我会一直陪着你。
             </p>
+            {breathCompletedAt !== null && (
+              <button
+                className="secondary full breathe-again"
+                onClick={() => {
+                  setElapsed(0);
+                  setRun((current) => ({ id: current.id + 1, target: 1 }));
+                  setBreathCompletedAt(null);
+                }}
+              >
+                再呼吸一次
+              </button>
+            )}
             <button
               className="primary full"
               disabled={breathCompletedAt === null}
@@ -174,6 +229,8 @@ export default function Preparation({
                   bathroomAndWaterChecked: bathroomReady,
                   breathStartedAt,
                   breathCompletedAt,
+                  guidedBreaths,
+                  guidedBreathingMs,
                 };
                 commit((db) =>
                   startPreparedTask(
@@ -186,7 +243,7 @@ export default function Preparation({
                 );
               }}
             >
-              正式开始
+              现在开始
             </button>
           </section>
         )}
@@ -194,3 +251,4 @@ export default function Preparation({
     </div>
   );
 }
+
