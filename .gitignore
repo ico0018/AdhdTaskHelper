@@ -1,0 +1,8 @@
+node_modules/
+.next/
+out/
+.npm-cache/
+*.tsbuildinfo
+.env*
+coverage/
+NoraFlow-static.zip
