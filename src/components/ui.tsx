@@ -55,19 +55,42 @@ export function Modal({
   title,
   children,
   onClose,
+  className = "",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    dialog.current?.showModal();
+    const element = dialog.current;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    const rootOverflow = document.documentElement.style.overflow;
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    element?.showModal();
+    return () => {
+      element?.close();
+      Object.assign(body.style, previous);
+      document.documentElement.style.overflow = rootOverflow;
+      window.scrollTo(0, scrollY);
+    };
   }, []);
   return (
     <dialog
       ref={dialog}
-      className="modal"
+      className={`modal ${className}`}
       onCancel={onClose}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
