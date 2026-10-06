@@ -92,7 +92,10 @@ export default function TaskForm({
             value={type}
             onChange={(e) => setType(e.target.value as TaskType)}
           >
-            {taskTypes.map((t) => (
+            {type === "reading" && (
+              <option value="reading" hidden>原任务类型</option>
+            )}
+            {taskTypes.filter((t) => t !== "reading").map((t) => (
               <option key={t} value={t}>
                 {typeLabels[t]}
               </option>
