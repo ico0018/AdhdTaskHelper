@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nora Flow",
+  title: "任务小帮手",
   description: "学习任务、材料准备与专注计时。",
   icons: { icon: "/icon.svg" },
 };
@@ -21,3 +21,4 @@ export default function RootLayout({
     </html>
   );
 }
+
