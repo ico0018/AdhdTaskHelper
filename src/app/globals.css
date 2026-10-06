@@ -2077,4 +2077,10 @@ input::placeholder {
 .task-form-modal .task-form { display: flex; flex-direction: column; min-height: 0; gap: 0; overflow: hidden; }
 .task-form-fields { display: grid; gap: 19px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 20px; }
 .task-form-footer { flex-shrink: 0; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--background); }
+.needs-preparation { width: 100%; }
+.needs-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 36px 0; }
+.need-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 155px; border: 2px solid var(--line); border-radius: 20px; background: var(--paper); color: var(--ink); font-size: 22px; }
+.need-option span { font-size: 48px; line-height: 1.2; }
+.need-option.selected { border-color: var(--orange); background: var(--yellow-light); }
+.needs-preparation > p { margin: 0 0 20px; font-size: 20px; }
 
