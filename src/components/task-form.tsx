@@ -72,8 +72,9 @@ export default function TaskForm({
       onClose();
   };
   return (
-    <Modal title={task ? "编辑任务" : "添加一件事"} onClose={onClose}>
+    <Modal title={task ? "编辑任务" : "添加一件事"} onClose={onClose} className="task-form-modal">
       <form onSubmit={submit} className="task-form">
+        <div className="task-form-fields">
         <label>
           任务名称
           <input
@@ -186,9 +187,12 @@ export default function TaskForm({
           每行一项，最多 30 项，每项最多 40 字。孩子开始前会逐项勾选。
         </p>
         {materialError && <p role="alert">{materialError}</p>}
+        </div>
+        <div className="task-form-footer">
         <button className="primary full" type="submit" disabled={!title.trim()}>
           保存任务
         </button>
+        </div>
       </form>
     </Modal>
   );
