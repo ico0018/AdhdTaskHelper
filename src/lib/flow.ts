@@ -1,5 +1,7 @@
 import {
   checkQuestions,
+  focusCycleInputSchema,
+  type FocusCycleInput,
   type Database,
   type Task,
   type TaskInput,
@@ -53,9 +55,11 @@ export function createDatabase(date: string, now: number): Database {
     deletedAt: null,
     reminderPending: false,
     materials: input.materials ?? [],
+    focusCycleId: input.focusCycleId ?? null,
   }));
   return {
-    version: 1,
+    version: 2,
+    focusCycles: [],
     user,
     tasks,
     sessions: [],
@@ -114,6 +118,7 @@ export function addTask(
   input: TaskInput,
   now: number,
 ): Database {
+  validateTaskCycle(db, input.focusCycleId);
   const next = ensurePlan(db, date, now);
   const task: Task = {
     ...input,
@@ -127,6 +132,7 @@ export function addTask(
     deletedAt: null,
     reminderPending: false,
     materials: input.materials ?? [],
+    focusCycleId: input.focusCycleId ?? null,
   };
   if (!task.title) throw new Error("请写下任务名称。");
   return {
@@ -142,6 +148,7 @@ export function editTask(
   taskId: string,
   input: TaskInput,
 ): Database {
+  validateTaskCycle(db, input.focusCycleId);
   if (sessionForTask(db, taskId))
     throw new Error("已经开始的任务保留原来的记录，请添加新任务。");
   if (!input.title.trim()) throw new Error("请写下任务名称。");
@@ -156,6 +163,10 @@ export function editTask(
             description: input.description.trim(),
             checkQuestion: checkQuestions[input.type],
             materials: input.materials ?? t.materials,
+            focusCycleId:
+              input.focusCycleId === undefined
+                ? t.focusCycleId
+                : input.focusCycleId,
           }
         : t,
     ),
@@ -398,4 +409,87 @@ export function dailyReflection(
       },
     ],
   };
+}
+
+export function activeFocusCycle(db: Database) {
+  return db.focusCycles.find(
+    (cycle) => cycle.active && cycle.userId === db.user.id,
+  );
+}
+function validateTaskCycle(db: Database, cycleId: string | null | undefined) {
+  if (cycleId && activeFocusCycle(db)?.id !== cycleId)
+    throw new Error("本期主攻已经改变，请重新选择。");
+}
+export function createFocusCycle(
+  db: Database,
+  input: FocusCycleInput,
+  now: number,
+): Database {
+  if (activeFocusCycle(db)) throw new Error("请先结束当前主攻周期。");
+  const validated = focusCycleInputSchema.parse(input);
+  return {
+    ...db,
+    focusCycles: [
+      ...db.focusCycles,
+      {
+        ...validated,
+        id: id(),
+        userId: db.user.id,
+        active: true,
+        createdAt: now,
+      },
+    ],
+  };
+}
+export function editFocusCycle(
+  db: Database,
+  cycleId: string,
+  input: FocusCycleInput,
+): Database {
+  if (activeFocusCycle(db)?.id !== cycleId)
+    throw new Error("本期主攻已经结束或改变。");
+  const validated = focusCycleInputSchema.parse(input);
+  return {
+    ...db,
+    focusCycles: db.focusCycles.map((cycle) =>
+      cycle.id === cycleId ? { ...cycle, ...validated } : cycle,
+    ),
+  };
+}
+// Ending preserves the context and all tasks/sessions. No destructive cycle deletion in the UI.
+export function endFocusCycle(db: Database, cycleId: string): Database {
+  if (activeFocusCycle(db)?.id !== cycleId)
+    throw new Error("本期主攻已经结束或改变。");
+  return {
+    ...db,
+    focusCycles: db.focusCycles.map((cycle) =>
+      cycle.id === cycleId ? { ...cycle, active: false } : cycle,
+    ),
+  };
+}
+export function primaryTaskForDate(
+  db: Database,
+  date: string,
+): Task | undefined {
+  const pending = tasksForDate(db, date).filter(
+    (task) => !sessionForTask(db, task.id)?.completed,
+  );
+  const cycle = activeFocusCycle(db);
+  return (
+    pending.find((task) => cycle && task.focusCycleId === cycle.id) ??
+    pending[0]
+  );
+}
+// Calendar context only: does not read completion history or calculate a streak.
+export function cycleCalendarLabel(
+  cycle: { startDate: string; targetEndDate: string },
+  today: string,
+): string {
+  if (today < cycle.startDate || today > cycle.targetEndDate)
+    return `${cycle.startDate} — ${cycle.targetEndDate}`;
+  const days = (from: string, to: string) =>
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
+      86400000 +
+    1;
+  return `Day ${days(cycle.startDate, today)} / ${days(cycle.startDate, cycle.targetEndDate)}`;
 }

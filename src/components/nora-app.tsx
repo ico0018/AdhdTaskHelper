@@ -11,8 +11,7 @@ import {
   editTask,
   ensurePlan,
   localDate,
-  tasksForDate,
-  sessionForTask,
+  activeFocusCycle,
 } from "@/lib/flow";
 import { repository, serverSnapshot } from "@/lib/repository";
 import Today from "./today";
@@ -122,14 +121,7 @@ export default function NoraApp({
           const success = commit(transform);
           if (success) {
             setSelected(null);
-            const current = repository.getSnapshot()!;
-            const tasks = tasksForDate(current, today);
-            setPage(
-              tasks.length > 0 &&
-                tasks.every((t) => sessionForTask(current, t.id)?.completed)
-                ? "summary"
-                : "today",
-            );
+            setPage("today");
           }
           return success;
         }}
@@ -190,6 +182,7 @@ export default function NoraApp({
       {parentMode && form && (
         <TaskForm
           task={form === "new" ? undefined : form}
+          focusCycle={activeFocusCycle(db!)}
           onClose={() => setForm(null)}
           onSave={(input) =>
             commit((current) =>

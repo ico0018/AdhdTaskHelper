@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { Check, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type Database, type Task } from "@/lib/models";
-import { markReminder, sessionForTask, tasksForDate } from "@/lib/flow";
+import {
+  activeFocusCycle,
+  createFocusCycle,
+  editFocusCycle,
+  endFocusCycle,
+  markReminder,
+  sessionForTask,
+  tasksForDate,
+} from "@/lib/flow";
+import FocusCycleForm from "./focus-cycle-form";
 import { repository } from "@/lib/repository";
 import { Modal, TaskIcon, formatMinutes } from "./ui";
 
@@ -33,6 +42,9 @@ export default function Parent({
   onDelete: (task: Task) => void;
   commit: (transform: (db: Database) => Database) => boolean;
 }) {
+  const [cycleForm, setCycleForm] = useState(false);
+  const [endingCycle, setEndingCycle] = useState(false);
+  const cycle = activeFocusCycle(db);
   const [date, setDate] = useState(today);
   const [details, setDetails] = useState<string | null>(null);
   const tasks = tasksForDate(db, date);
@@ -49,6 +61,67 @@ export default function Parent({
           <h1>家长端</h1>
         </div>
       </div>
+      <section className="parent-cycle" aria-labelledby="parent-cycle-title">
+        <h2 id="parent-cycle-title">本期主攻</h2>
+        {cycle ? (
+          <>
+            <h3>{cycle.title}</h3>
+            <p>
+              {cycle.startDate} — {cycle.targetEndDate}
+            </p>
+            <div className="cycle-actions">
+              <button className="secondary" onClick={() => setCycleForm(true)}>
+                修改名称和日期
+              </button>
+              <button
+                className="text-button"
+                onClick={() => setEndingCycle(true)}
+              >
+                结束本期主攻
+              </button>
+            </div>
+          </>
+        ) : (
+          <button className="secondary" onClick={() => setCycleForm(true)}>
+            创建主攻周期
+          </button>
+        )}
+      </section>
+      {cycleForm && (
+        <FocusCycleForm
+          cycle={cycle}
+          today={today}
+          onClose={() => setCycleForm(false)}
+          onSave={(input) =>
+            commit((current) =>
+              cycle
+                ? editFocusCycle(current, cycle.id, input)
+                : createFocusCycle(current, input, Date.now()),
+            )
+          }
+        />
+      )}
+      {endingCycle && cycle && (
+        <Modal title="结束本期主攻？" onClose={() => setEndingCycle(false)}>
+          <p className="delete-description">
+            {cycle.title}。任务和学习记录会保留。
+          </p>
+          <div className="modal-actions">
+            <button className="secondary" onClick={() => setEndingCycle(false)}>
+              取消
+            </button>
+            <button
+              className="primary"
+              onClick={() => {
+                if (commit((current) => endFocusCycle(current, cycle.id)))
+                  setEndingCycle(false);
+              }}
+            >
+              结束主攻周期
+            </button>
+          </div>
+        </Modal>
+      )}
       <div className="parent-toolbar">
         <label>
           查看日期
@@ -108,6 +181,15 @@ export default function Parent({
                         : "待开始"}
                 </span>
               </div>
+              {task.focusCycleId && (
+                <p className="parent-materials">
+                  主攻：
+                  {
+                    db.focusCycles.find((item) => item.id === task.focusCycleId)
+                      ?.title
+                  }
+                </p>
+              )}
               <p className="parent-materials">
                 准备材料：
                 {task.materials.length ? task.materials.join("、") : "未设置"}

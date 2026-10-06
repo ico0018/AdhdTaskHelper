@@ -51,6 +51,7 @@ export const taskSchema = z.object({
   deletedAt: timestamp.nullable(),
   reminderPending: z.boolean(),
   materials: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  focusCycleId: z.string().nullable().default(null),
 });
 export const preparationSchema = z.object({
   materials: z.array(z.string()),
@@ -101,14 +102,94 @@ export const reflectionSchema = z.object({
   moreTimeTaskId: z.string().nullable(),
   createdAt: timestamp,
 });
-export const databaseSchema = z.object({
-  version: z.literal(1),
+const cycleDate = date.refine((value) => {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}, "请填写有效日期。");
+export const focusCycleInputSchema = z
+  .object({
+    title: z.string().trim().min(1, "请填写主攻名称。").max(40),
+    startDate: cycleDate,
+    targetEndDate: cycleDate,
+  })
+  .refine((cycle) => cycle.targetEndDate >= cycle.startDate, {
+    message: "结束日期不能早于开始日期。",
+    path: ["targetEndDate"],
+  });
+export const focusCycleSchema = focusCycleInputSchema.safeExtend({
+  id: z.string(),
+  userId: z.string(),
+  active: z.boolean(),
+  createdAt: timestamp,
+});
+const commonDatabase = {
   user: userSchema,
   tasks: z.array(taskSchema),
   sessions: z.array(sessionSchema),
   plans: z.array(planSchema),
   reflections: z.array(reflectionSchema),
+};
+export const legacyDatabaseSchema = z.object({
+  ...commonDatabase,
+  version: z.literal(1),
+  tasks: z.array(taskSchema.omit({ focusCycleId: true })),
 });
+export const databaseSchema = z
+  .object({
+    ...commonDatabase,
+    version: z.literal(2),
+    focusCycles: z.array(focusCycleSchema),
+  })
+  .superRefine((db, ctx) => {
+    if (db.focusCycles.filter((cycle) => cycle.active).length > 1)
+      ctx.addIssue({
+        code: "custom",
+        message: "同一时间只能有一个本期主攻。",
+        path: ["focusCycles"],
+      });
+    const cycles = new Map(db.focusCycles.map((cycle) => [cycle.id, cycle]));
+    for (const cycle of db.focusCycles)
+      if (cycle.userId !== db.user.id)
+        ctx.addIssue({
+          code: "custom",
+          message: "主攻周期用户不匹配。",
+          path: ["focusCycles"],
+        });
+    for (const task of db.tasks)
+      if (
+        task.focusCycleId &&
+        cycles.get(task.focusCycleId)?.userId !== task.userId
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "任务关联的主攻周期不存在。",
+          path: ["tasks"],
+        });
+  });
+
+// Explicit, pure migration. Never silently reset unsupported or damaged records.
+export function migrateDatabase(input: unknown): Database {
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "version" in input &&
+    input.version === 1
+  ) {
+    const legacy = legacyDatabaseSchema.parse(input);
+    return databaseSchema.parse({
+      ...legacy,
+      version: 2,
+      focusCycles: [],
+      tasks: legacy.tasks.map((task) => ({ ...task, focusCycleId: null })),
+    });
+  }
+  return databaseSchema.parse(input);
+}
+export type FocusCycle = z.infer<typeof focusCycleSchema>;
+export type FocusCycleInput = z.infer<typeof focusCycleInputSchema>;
 
 export type User = z.infer<typeof userSchema>;
 export type Task = z.infer<typeof taskSchema>;
@@ -123,7 +204,7 @@ export type TaskPreparation = z.infer<typeof preparationSchema>;
 export type TaskInput = Pick<
   Task,
   "title" | "description" | "type" | "priority"
-> & { materials?: string[] };
+> & { materials?: string[]; focusCycleId?: string | null };
 
 export const typeLabels: Record<TaskType, string> = {
   math: "数学",

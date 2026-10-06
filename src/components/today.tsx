@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { Database, Task } from "@/lib/models";
-import { sessionForTask, tasksForDate } from "@/lib/flow";
-import { QuietLandscape, TaskIcon } from "./ui";
+import {
+  activeFocusCycle,
+  cycleCalendarLabel,
+  primaryTaskForDate,
+  sessionForTask,
+  tasksForDate,
+} from "@/lib/flow";
+import { TaskIcon } from "./ui";
 
 export default function Today({
   db,
@@ -17,64 +23,80 @@ export default function Today({
   onSelect: (task: Task) => void;
   onSummary: () => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const tasks = tasksForDate(db, date);
-  const done = tasks.filter((t) => sessionForTask(db, t.id)?.completed);
-  const ordered = [
-    ...tasks.filter((t) => !sessionForTask(db, t.id)?.completed),
-    ...done,
-  ];
+  const cycle = activeFocusCycle(db);
+  const primary = primaryTaskForDate(db, date);
+  const others = tasks.filter(
+    (task) =>
+      task.id !== primary?.id && !sessionForTask(db, task.id)?.completed,
+  );
+  const done = tasks.filter((task) => sessionForTask(db, task.id)?.completed);
   return (
-    <div className="child-today">
-      <section className="hero">
-        <h1>今天做什么？</h1>
-        <QuietLandscape />
-      </section>
-      <section className="task-section" aria-label="今天的任务">
-        {!tasks.length ? (
-          <div className="empty-state">
-            <h2>今天没有任务</h2>
+    <div className="child-today cycle-today">
+      {cycle && (
+        <section className="cycle-context" aria-labelledby="cycle-title">
+          <h2>🔥 我最近在练</h2>
+          <h1 id="cycle-title">{cycle.title}</h1>
+          <p>{cycleCalendarLabel(cycle, date)}</p>
+        </section>
+      )}
+      {primary ? (
+        <section className="current-task" aria-labelledby="current-title">
+          <h2>现在</h2>
+          <div className="current-card">
+            <TaskIcon type={primary.type} />
+            <h2 id="current-title">{primary.title}</h2>
+            {primary.description && <p>{primary.description}</p>}
+            <button className="primary full" onClick={() => onSelect(primary)}>
+              开始
+            </button>
           </div>
-        ) : (
-          <div className="task-list">
-            {(showAll ? ordered : ordered.slice(0, 3)).map((task) => {
-              const completed = !!sessionForTask(db, task.id)?.completed;
-              return (
+        </section>
+      ) : (
+        <section className="today-empty">
+          {tasks.length ? (
+            <>
+              <h1>今天完成啦</h1>
+              <button className="primary full" onClick={onSummary}>
+                查看今天
+              </button>
+            </>
+          ) : (
+            <h1>今天没有任务</h1>
+          )}
+        </section>
+      )}
+      {!!others.length && (
+        <section className="remaining-tasks">
+          <button
+            className="remaining-toggle"
+            aria-expanded={expanded}
+            aria-controls="remaining-list"
+            onClick={() => setExpanded(!expanded)}
+          >
+            今天还有 <ChevronDown size={20} aria-hidden="true" />
+          </button>
+          {expanded && (
+            <div id="remaining-list" className="remaining-list">
+              {others.map((task) => (
                 <button
                   key={task.id}
-                  className={`task-card ${completed ? "is-done" : ""}`}
-                  onClick={() => (completed ? onSummary() : onSelect(task))}
-                  aria-label={`${task.title}，${completed ? "已完成，查看今天" : "选择这件事"}`}
+                  className="remaining-task"
+                  onClick={() => onSelect(task)}
                 >
-                  <TaskIcon type={task.type} />
-                  <div className="task-copy">
-                    <div className="task-title">{task.title}</div>
-                    {task.description && <p>{task.description}</p>}
-                  </div>
-                  <span className={`task-status ${completed ? "checked" : ""}`}>
-                    {completed ? (
-                      <Check size={19} />
-                    ) : (
-                      <ArrowUpRight size={20} />
-                    )}
-                  </span>
+                  {task.title}
                 </button>
-              );
-            })}
-          </div>
-        )}
-        {tasks.length > 3 && (
-          <button className="more-button" onClick={() => setShowAll(!showAll)}>
-            <ChevronDown size={18} />
-            {showAll ? "收起" : `更多任务（${tasks.length - 3}）`}
-          </button>
-        )}
-        {tasks.length > 0 && done.length === tasks.length && (
-          <button className="primary full summary-link" onClick={onSummary}>
-            今天完成啦
-          </button>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+      {!!primary && !!done.length && (
+        <button className="text-button completed-link" onClick={onSummary}>
+          查看已完成
+        </button>
+      )}
     </div>
   );
 }
