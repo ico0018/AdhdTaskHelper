@@ -67,14 +67,26 @@ export function Focus({
       <div className="timer-ring">
         <svg viewBox="0 0 320 320" aria-hidden="true">
           <circle className="ring-track" cx="160" cy="160" r="149" />
-          <circle
-            className="ring-progress"
-            cx="160"
-            cy="160"
-            r="149"
-            pathLength="100"
-            strokeDasharray={`${progress * 100} 100`}
-          />
+          {[
+            { start: 0, end: 50, color: "#83ad80" },
+            { start: 50, end: 75, color: "#e4c45f" },
+            { start: 75, end: 100, color: "#d78378" },
+          ].map(({ start, end, color }) => {
+            const remainingStart = Math.max(start, progress * 100);
+            return (
+              <circle
+                key={color}
+                className="ring-time-segment"
+                cx="160"
+                cy="160"
+                r="149"
+                pathLength="100"
+                stroke={color}
+                strokeDasharray={`${Math.max(0, end - remainingStart)} 100`}
+                strokeDashoffset={-remainingStart}
+              />
+            );
+          })}
         </svg>
         <div className="timer-face">
           <span
