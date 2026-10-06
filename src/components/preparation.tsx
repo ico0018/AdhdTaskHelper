@@ -15,7 +15,6 @@ import QuietPet from "./quiet-pet";
 
 export default function Preparation({
   task,
-  bathroomReminder,
   commit,
   onBack,
 }: {
@@ -27,7 +26,9 @@ export default function Preparation({
   const [estimate, setEstimate] = useState<number | null>(null);
   const [checked, setChecked] = useState<string[]>([]);
   const [bathroomReady, setBathroomReady] = useState(false);
-  const [phase, setPhase] = useState<"materials" | "breathing">("materials");
+  const [phase, setPhase] = useState<"materials" | "needs" | "breathing">("materials");
+  const [needsWater, setNeedsWater] = useState(false);
+  const [needsToilet, setNeedsToilet] = useState(false);
   const [breathStartedAt, setBreathStartedAt] = useState<number | null>(null);
   const [breathCompletedAt, setBreathCompletedAt] = useState<number | null>(
     null,
@@ -40,8 +41,7 @@ export default function Preparation({
   const allReady =
     estimate !== null &&
     task.timeOptions.includes(estimate) &&
-    task.materials.every((m) => checked.includes(m)) &&
-    (!bathroomReminder || bathroomReady);
+    task.materials.every((m) => checked.includes(m));
 
   useEffect(() => {
     if (breathStartedAt === null || breathCompletedAt !== null) return;
@@ -79,7 +79,7 @@ export default function Preparation({
           phase === "materials"
             ? onBack
             : () => {
-                setPhase("materials");
+                setPhase(phase === "breathing" ? "needs" : "materials");
                 setBreathStartedAt(null);
                 setBreathCompletedAt(null);
                 setElapsed(0);
@@ -136,39 +136,40 @@ export default function Preparation({
                 ))}
               </section>
             )}
-            {bathroomReminder && (
-              <section className="bathroom-preparation">
-                <h2>要上厕所、喝水吗？</h2>
-                <label className="material-check">
-                  <input
-                    type="checkbox"
-                    checked={bathroomReady}
-                    onChange={(e) => setBathroomReady(e.target.checked)}
-                  />
-                  <span>已经准备好了</span>
-                </label>
-              </section>
-            )}
             <button
               className="primary full"
               disabled={!allReady}
               onClick={() => {
-                setPhase("breathing");
-                setBreathStartedAt(Date.now());
-                setBreathCompletedAt(null);
-                setElapsed(0);
-                setGuidedBreaths(0);
-                setGuidedBreathingMs(0);
-                setRun((current) => ({
-                  id: current.id + 1,
-                  target: REQUIRED_BREATHS,
-                }));
+                setPhase("needs");
               }}
             >
               准备好了
               <Check size={20} />
             </button>
           </>
+        ) : phase === "needs" ? (
+          <section className="needs-preparation">
+            <h1>要喝水、上厕所吗？</h1>
+            <div className="needs-options">
+              <button className={`need-option ${needsWater ? "selected" : ""}`} aria-pressed={needsWater} onClick={() => setNeedsWater(!needsWater)}>
+                <span aria-hidden="true">🥤</span>喝水
+              </button>
+              <button className={`need-option ${needsToilet ? "selected" : ""}`} aria-pressed={needsToilet} onClick={() => setNeedsToilet(!needsToilet)}>
+                <span aria-hidden="true">🚽</span>上厕所
+              </button>
+            </div>
+            {(needsWater || needsToilet) && <p>准备好再继续</p>}
+            <button className="primary full" onClick={() => {
+              setBathroomReady(true);
+              setPhase("breathing");
+              setBreathStartedAt(Date.now());
+              setBreathCompletedAt(null);
+              setElapsed(0);
+              setGuidedBreaths(0);
+              setGuidedBreathingMs(0);
+              setRun((current) => ({ id: current.id + 1, target: REQUIRED_BREATHS }));
+            }}>准备好了</button>
+          </section>
         ) : (
           <section className="breathing-preparation">
             <h1>{breathCompletedAt === null ? "深呼吸" : "准备开始"}</h1>
