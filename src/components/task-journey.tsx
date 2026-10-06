@@ -93,28 +93,17 @@ export default function TaskJourney({
         }}
         aria-hidden="true"
       >
-        <circle
-          cy="-23"
-          r="7"
-          fill="#e8c5a2"
-          stroke="#917758"
-          strokeWidth="1.5"
-        />
-        <path
-          d="M-7-24q1-10 12-4"
-          fill="none"
-          stroke="#675440"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-        <path d="M-5-13 5-13 8 0H-8Z" fill="#c78c68" />
-        <path
-          d="m-5-9-7 7m17-7 7 7M-4 0l-3 9M4 0l3 9"
-          fill="none"
-          stroke="#917758"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
+        <path d="M-15-10q-8-5-7-10" fill="none" stroke="#819b9b" strokeWidth="3" strokeLinecap="round" />
+        <ellipse cx="-3" cy="-13" rx="17" ry="13" fill="#b4cccc" stroke="#819b9b" strokeWidth="1.5" />
+        <rect x="-14" y="-7" width="8" height="15" rx="4" fill="#b4cccc" stroke="#819b9b" strokeWidth="1.5" />
+        <rect x="5" y="-7" width="8" height="15" rx="4" fill="#b4cccc" stroke="#819b9b" strokeWidth="1.5" />
+        <circle cx="10" cy="-23" r="13" fill="#b4cccc" stroke="#819b9b" strokeWidth="1.5" />
+        <ellipse cx="1" cy="-21" rx="10" ry="12" fill="#c6dddd" stroke="#819b9b" strokeWidth="1.5" />
+        <ellipse cx="1" cy="-20" rx="6" ry="8" fill="#e5c5bb" />
+        <path d="M18-19q8 13 3 19q-4 4-7-1" fill="none" stroke="#819b9b" strokeWidth="8" strokeLinecap="round" />
+        <path d="M18-19q8 13 3 19q-4 4-7-1" fill="none" stroke="#b4cccc" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="15" cy="-26" r="2" fill="#394b4c" />
+        <circle cx="18" cy="-21" r="3" fill="#e5b6a8" />
       </g>
     </svg>
   );
