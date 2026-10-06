@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   type Task,
+  type FocusCycle,
   type TaskInput,
   type TaskType,
   taskTypes,
@@ -12,10 +13,12 @@ import { Modal } from "./ui";
 
 export default function TaskForm({
   task,
+  focusCycle,
   onSave,
   onClose,
 }: {
   task?: Task;
+  focusCycle?: FocusCycle;
   onSave: (input: TaskInput) => boolean;
   onClose: () => void;
 }) {
@@ -24,6 +27,9 @@ export default function TaskForm({
   const [type, setType] = useState<TaskType>(task?.type ?? "math");
   const [priority, setPriority] = useState(task?.priority ?? 2);
   const [materials, setMaterials] = useState(task?.materials.join("\n") ?? "");
+  const [belongsToCycle, setBelongsToCycle] = useState(
+    !!focusCycle && task?.focusCycleId === focusCycle.id,
+  );
   const [materialError, setMaterialError] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -39,7 +45,16 @@ export default function TaskForm({
       setMaterialError("最多 30 项材料，每项最多 40 字。");
       return;
     }
-    if (onSave({ title, description, type, priority, materials: list }))
+    if (
+      onSave({
+        title,
+        description,
+        type,
+        priority,
+        materials: list,
+        focusCycleId: belongsToCycle && focusCycle ? focusCycle.id : null,
+      })
+    )
       onClose();
   };
   return (
@@ -89,6 +104,16 @@ export default function TaskForm({
             <option value={3}>稍后做</option>
           </select>
         </label>
+        {focusCycle && (
+          <label className="cycle-assignment">
+            <input
+              type="checkbox"
+              checked={belongsToCycle}
+              onChange={(e) => setBelongsToCycle(e.target.checked)}
+            />
+            <span>属于本期主攻：{focusCycle.title}</span>
+          </label>
+        )}
         <label>
           准备材料
           <textarea

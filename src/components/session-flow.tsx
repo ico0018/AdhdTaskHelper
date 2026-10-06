@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, HelpCircle, Plus } from "lucide-react";
+import { Check, HelpCircle, Plus } from "lucide-react";
 import {
   type TaskSession,
   type Database,
@@ -193,7 +193,11 @@ export function Result({
   return (
     <div className="decision-screen">
       <div className="decision-content result-screen">
-        <h1>{session.taskTitle}</h1>
+        <h1 className="round-ended">
+          <Check size={26} aria-hidden="true" />
+          这一轮结束
+        </h1>
+        <h2 className="result-task-title">{session.taskTitle}</h2>
         <div className="time-comparison">
           <div>
             <span>预计</span>
@@ -232,8 +236,7 @@ export function Result({
             )
           }
         >
-          {reason ? "保存" : "跳过"}
-          <ArrowRight size={18} />
+          回到今天
         </button>
       </div>
     </div>
