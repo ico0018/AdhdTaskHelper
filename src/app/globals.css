@@ -2071,4 +2071,10 @@ input::placeholder {
 .task-form .parent-material-options input { width: 22px; height: 22px; padding: 0; flex-shrink: 0; }
 .focus-screen .ring-track { stroke-width: 14; }
 .ring-time-segment { fill: none; stroke-width: 14; stroke-linecap: butt; }
+.modal { overscroll-behavior: contain; }
+.task-form-modal[open] { display: flex; flex-direction: column; padding: 0; overflow: hidden; max-height: calc(100dvh - 32px); }
+.task-form-modal .modal-header { flex-shrink: 0; margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.task-form-modal .task-form { display: flex; flex-direction: column; min-height: 0; gap: 0; overflow: hidden; }
+.task-form-fields { display: grid; gap: 19px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 20px; }
+.task-form-footer { flex-shrink: 0; padding: 14px 20px max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--background); }
 
