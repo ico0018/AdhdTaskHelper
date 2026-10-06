@@ -168,7 +168,7 @@ export default function NoraApp({
           <Link
             className="wordmark"
             href="/"
-            aria-label="Nora Flow 首页"
+            aria-label="任务小帮手 首页"
             onClick={
               parentMode
                 ? undefined
@@ -181,7 +181,7 @@ export default function NoraApp({
             <span className="brand-icon">
               <Leaf size={20} strokeWidth={1.8} />
             </span>
-            Nora<span>flow</span>
+            任务小帮手
           </Link>
         </header>
       )}
