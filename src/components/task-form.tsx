@@ -7,8 +7,11 @@ import {
   type TaskType,
   taskTypes,
   typeLabels,
+  timeOptionsSchema,
 } from "@/lib/models";
 import { Modal } from "./ui";
+
+const commonMaterials = ["铅笔", "橡皮", "尺子", "作业本", "练习册", "语文书", "数学书", "英语书", "点读笔", "草稿纸"];
 
 export default function TaskForm({
   task,
@@ -23,23 +26,49 @@ export default function TaskForm({
   const [description, setDescription] = useState(task?.description ?? "");
   const [type, setType] = useState<TaskType>(task?.type ?? "math");
   const [priority, setPriority] = useState(task?.priority ?? 2);
-  const [materials, setMaterials] = useState(task?.materials.join("\n") ?? "");
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>(
+    task?.materials.filter((item) => commonMaterials.includes(item)) ?? [],
+  );
+  const [materials, setMaterials] = useState(
+    task?.materials.filter((item) => !commonMaterials.includes(item)).join("\n") ?? "",
+  );
+  const [timeOptions, setTimeOptions] = useState(
+    (task?.timeOptions ?? [10, 20, 30]).map(String),
+  );
+  const [timeError, setTimeError] = useState("");
   const [materialError, setMaterialError] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const list = [
-      ...new Set(
-        materials
+      ...new Set([
+        ...selectedMaterials,
+        ...materials
           .split(/[\n,，、]/)
           .map((item) => item.trim())
           .filter(Boolean),
-      ),
+      ]),
     ];
     if (list.length > 30 || list.some((item) => item.length > 40)) {
       setMaterialError("最多 30 项材料，每项最多 40 字。");
       return;
     }
-    if (onSave({ title, description, type, priority, materials: list }))
+    const parsedTimes = timeOptionsSchema.safeParse(
+      timeOptions.map((value) => Number(value)),
+    );
+    if (!parsedTimes.success) {
+      setTimeError("请设置三个不同的整数时间，每个 1–180 分钟。");
+      return;
+    }
+    if (
+      onSave({
+        title,
+        description,
+        type,
+        priority,
+        materials: list,
+        timeOptions: [...parsedTimes.data].sort((a, b) => a - b),
+      })
+    )
       onClose();
   };
   return (
@@ -71,7 +100,10 @@ export default function TaskForm({
             value={type}
             onChange={(e) => setType(e.target.value as TaskType)}
           >
-            {taskTypes.map((t) => (
+            {type === "reading" && (
+              <option value="reading" hidden>原任务类型</option>
+            )}
+            {taskTypes.filter((t) => t !== "reading").map((t) => (
               <option key={t} value={t}>
                 {typeLabels[t]}
               </option>
@@ -89,8 +121,56 @@ export default function TaskForm({
             <option value={3}>稍后做</option>
           </select>
         </label>
+        <fieldset className="time-options-fieldset">
+          <legend>孩子可选的时间（分钟）</legend>
+          <div className="parent-time-options">
+            {timeOptions.map((value, index) => (
+              <label key={index}>
+                选项 {index + 1}
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={180}
+                  step={1}
+                  required
+                  value={value}
+                  onChange={(e) => {
+                    setTimeOptions(
+                      timeOptions.map((item, i) =>
+                        i === index ? e.target.value : item,
+                      ),
+                    );
+                    setTimeError("");
+                  }}
+                />
+              </label>
+            ))}
+          </div>
+          {timeError && <p role="alert">{timeError}</p>}
+        </fieldset>
+        <fieldset className="material-options-fieldset">
+          <legend>准备材料</legend>
+          <div className="parent-material-options">
+            {commonMaterials.map((item) => (
+              <label className="material-check" key={item}>
+                <input
+                  type="checkbox"
+                  checked={selectedMaterials.includes(item)}
+                  onChange={(e) => {
+                    setSelectedMaterials(e.target.checked
+                      ? [...selectedMaterials, item]
+                      : selectedMaterials.filter((value) => value !== item));
+                    setMaterialError("");
+                  }}
+                />
+                <span>{item}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label>
-          准备材料
+          其他材料
           <textarea
             rows={4}
             maxLength={1230}
@@ -99,7 +179,7 @@ export default function TaskForm({
               setMaterials(e.target.value);
               setMaterialError("");
             }}
-            placeholder={"尺子\n铅笔\n橡皮\n作业本"}
+            placeholder="特殊用品，每行一项"
           />
         </label>
         <p className="form-note">
@@ -113,3 +193,4 @@ export default function TaskForm({
     </Modal>
   );
 }
+

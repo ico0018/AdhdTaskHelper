@@ -1,5 +1,7 @@
 import {
   checkQuestions,
+  timeOptionsSchema,
+  overrunReasons,
   type Database,
   type Task,
   type TaskInput,
@@ -7,6 +9,7 @@ import {
   type ReflectionReason,
   type TaskPreparation,
 } from "./models";
+import { BREATH_CYCLE_MS, REQUIRED_BREATHS } from "./breathing";
 
 export function localDate(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -53,6 +56,7 @@ export function createDatabase(date: string, now: number): Database {
     deletedAt: null,
     reminderPending: false,
     materials: input.materials ?? [],
+    timeOptions: timeOptionsSchema.parse(input.timeOptions ?? [10, 20, 30]),
   }));
   return {
     version: 1,
@@ -127,6 +131,7 @@ export function addTask(
     deletedAt: null,
     reminderPending: false,
     materials: input.materials ?? [],
+    timeOptions: timeOptionsSchema.parse(input.timeOptions ?? [10, 20, 30]),
   };
   if (!task.title) throw new Error("请写下任务名称。");
   return {
@@ -156,6 +161,9 @@ export function editTask(
             description: input.description.trim(),
             checkQuestion: checkQuestions[input.type],
             materials: input.materials ?? t.materials,
+            timeOptions: timeOptionsSchema.parse(
+              input.timeOptions ?? t.timeOptions,
+            ),
           }
         : t,
     ),
@@ -236,7 +244,7 @@ export function startPreparedTask(
 ): Database {
   const task = db.tasks.find((t) => t.id === taskId && !t.deletedAt);
   if (!task) throw new Error("任务不存在。");
-  if (![10, 20, 30].includes(estimate)) throw new Error("请选择时间。");
+  if (!task.timeOptions.includes(estimate)) throw new Error("请选择时间。");
   if (
     task.materials.some((material) => !preparation.materials.includes(material))
   )
@@ -244,11 +252,16 @@ export function startPreparedTask(
   if (db.user.preparationReminderNeeded && !preparation.bathroomAndWaterChecked)
     throw new Error("请先准备好上厕所和喝水。");
   if (
-    preparation.breathCompletedAt - preparation.breathStartedAt < 3000 ||
+    preparation.guidedBreaths < REQUIRED_BREATHS ||
+    preparation.guidedBreathingMs < REQUIRED_BREATHS * BREATH_CYCLE_MS ||
+    preparation.guidedBreathingMs <
+      preparation.guidedBreaths * BREATH_CYCLE_MS ||
+    preparation.breathCompletedAt - preparation.breathStartedAt <
+      preparation.guidedBreathingMs ||
     preparation.breathCompletedAt > now ||
     preparation.breathStartedAt > now
   )
-    throw new Error("请先完成 3 秒深呼吸。");
+    throw new Error("请先完成 3 次完整深呼吸。");
   return startTask(db, taskId, estimate, now, {
     ...preparation,
     materials: [...task.materials],
@@ -399,3 +412,37 @@ export function dailyReflection(
     ],
   };
 }
+
+export function needsOverrunReflection(session: TaskSession): boolean {
+  return session.actualMinutes > session.estimatedMinutes;
+}
+export function chooseOverrunReason(
+  db: Database,
+  sessionId: string,
+  reason: (typeof overrunReasons)[number],
+): Database {
+  if (!overrunReasons.includes(reason)) throw new Error("请选择一个原因。");
+  return changeSession(db, sessionId, (session) => {
+    if (
+      session.status !== "reflecting" ||
+      !session.checkCompleted ||
+      !needsOverrunReflection(session)
+    )
+      throw new Error("请先完成任务并自检。");
+    return { ...session, reflectionReason: reason };
+  });
+}
+export function journeyForDate(db: Database, date: string) {
+  const tasks = tasksForDate(db, date);
+  const completed = tasks.filter((task) => {
+    const session = sessionForTask(db, task.id);
+    return (
+      session?.completed &&
+      (session.status === "completed" ||
+        !needsOverrunReflection(session) ||
+        session.reflectionReason !== null)
+    );
+  }).length;
+  return { total: tasks.length, completed };
+}
+

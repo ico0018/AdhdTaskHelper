@@ -1962,3 +1962,113 @@ input::placeholder {
     animation: none;
   }
 }
+
+/* Three full breaths, one optional extra; no breath-holding phase. */
+.breathing-preparation .breathing-orb {
+  animation: none;
+  transition: transform 100ms linear;
+}
+.breath-count {
+  margin: 14px 0 0;
+  font-size: 19px;
+  color: #707466;
+}
+.breathe-again {
+  margin-bottom: 14px;
+}
+.time-options-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.time-options-fieldset legend {
+  margin-bottom: 12px;
+}
+.parent-time-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.parent-time-options input {
+  min-width: 0;
+}
+.task-journey {
+  width: 100%;
+  max-width: 430px;
+  display: block;
+  margin: 12px auto 28px;
+  overflow: visible;
+}
+.child-today > .task-journey {
+  max-width: 380px;
+}
+.journey-person {
+  transition: none;
+}
+.journey-person.advancing {
+  transition: transform 1.1s ease-in-out;
+}
+.result-screen {
+  position: relative;
+}
+.completed-task-name {
+  font-size: 21px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.confetti {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 240px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.confetti i {
+  position: absolute;
+  top: 0;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: scatter-once 1.8s ease-out forwards;
+}
+@keyframes scatter-once {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) rotate(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(210px) rotate(210deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breathing-preparation .breathing-orb {
+    transform: scale(0.85) !important;
+    transition: none;
+  }
+  .journey-person.advancing {
+    transition: none;
+  }
+  .confetti {
+    top: -24px;
+  }
+  .confetti i {
+    animation: none;
+    opacity: 0.65;
+    transform: translateY(10px);
+  }
+}
+
+.material-options-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.material-options-fieldset legend { margin-bottom: 10px; font-weight: 600; }
+.parent-material-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.task-form .parent-material-options .material-check { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 48px; margin: 0; padding: 10px; }
+.task-form .parent-material-options input { width: 22px; height: 22px; padding: 0; flex-shrink: 0; }
+.focus-screen .ring-track { stroke-width: 14; }
+.ring-time-segment { fill: none; stroke-width: 14; stroke-linecap: butt; }
+

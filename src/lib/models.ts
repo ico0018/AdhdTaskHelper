@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const taskTypes = [
   "math",
+  "chinese",
   "reading",
   "english",
   "writing",
@@ -29,6 +30,16 @@ export const reflectionReasons = [
   "我估计错了",
   "其他",
 ] as const;
+export const overrunReasons = [
+  "比想象中难",
+  "中间走神了",
+  "有题不会",
+  "东西没准备好",
+] as const;
+export const timeOptionsSchema = z
+  .array(z.number().int().min(1).max(180))
+  .length(3)
+  .refine((values) => new Set(values).size === 3, "请设置三个不同的时间。");
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const timestamp = z.number().finite().nonnegative();
 
@@ -51,12 +62,15 @@ export const taskSchema = z.object({
   deletedAt: timestamp.nullable(),
   reminderPending: z.boolean(),
   materials: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  timeOptions: timeOptionsSchema.default([10, 20, 30]),
 });
 export const preparationSchema = z.object({
   materials: z.array(z.string()),
   bathroomAndWaterChecked: z.boolean(),
   breathStartedAt: timestamp,
   breathCompletedAt: timestamp,
+  guidedBreaths: z.number().int().nonnegative().default(0),
+  guidedBreathingMs: z.number().int().nonnegative().default(0),
 });
 export const sessionSchema = z.object({
   id: z.string(),
@@ -123,10 +137,11 @@ export type TaskPreparation = z.infer<typeof preparationSchema>;
 export type TaskInput = Pick<
   Task,
   "title" | "description" | "type" | "priority"
-> & { materials?: string[] };
+> & { materials?: string[]; timeOptions?: number[] };
 
 export const typeLabels: Record<TaskType, string> = {
   math: "数学",
+  chinese: "语文",
   reading: "阅读",
   english: "英语",
   writing: "写作",
@@ -135,9 +150,11 @@ export const typeLabels: Record<TaskType, string> = {
 };
 export const checkQuestions: Record<TaskType, string> = {
   math: "有没有漏题？",
+  chinese: "有没有漏题或漏字？",
   reading: "能说出刚才读了什么吗？",
   english: "有没有读完今天的内容？",
   writing: "有没有漏字或标点？",
   organization: "明天需要的东西都带了吗？",
   other: "有没有漏掉的地方？",
 };
+

@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, HelpCircle, Plus } from "lucide-react";
+import { Check, HelpCircle, Plus } from "lucide-react";
 import {
   type TaskSession,
   type Database,
   stuckReasons,
-  reflectionReasons,
-  type ReflectionReason,
+  overrunReasons,
   type StuckReason,
 } from "@/lib/models";
 import {
+  chooseOverrunReason,
+  needsOverrunReflection,
   completeCheck,
   completeReflection,
   extendSession,
@@ -18,6 +19,7 @@ import {
   recordStuck,
 } from "@/lib/flow";
 import { formatMinutes } from "./ui";
+import TaskJourney, { Confetti } from "./task-journey";
 import QuietPet from "./quiet-pet";
 
 type Commit = (transform: (db: Database) => Database) => boolean;
@@ -65,14 +67,26 @@ export function Focus({
       <div className="timer-ring">
         <svg viewBox="0 0 320 320" aria-hidden="true">
           <circle className="ring-track" cx="160" cy="160" r="149" />
-          <circle
-            className="ring-progress"
-            cx="160"
-            cy="160"
-            r="149"
-            pathLength="100"
-            strokeDasharray={`${progress * 100} 100`}
-          />
+          {[
+            { start: 0, end: 50, color: "#83ad80" },
+            { start: 50, end: 75, color: "#e4c45f" },
+            { start: 75, end: 100, color: "#d78378" },
+          ].map(({ start, end, color }) => {
+            const remainingStart = Math.max(start, progress * 100);
+            return (
+              <circle
+                key={color}
+                className="ring-time-segment"
+                cx="160"
+                cy="160"
+                r="149"
+                pathLength="100"
+                stroke={color}
+                strokeDasharray={`${Math.max(0, end - remainingStart)} 100`}
+                strokeDashoffset={-remainingStart}
+              />
+            );
+          })}
         </svg>
         <div className="timer-face">
           <span
@@ -184,16 +198,23 @@ export function SelfCheck({
 }
 export function Result({
   session,
+  db,
   commit,
 }: {
   session: TaskSession;
+  db: Database;
   commit: Commit;
 }) {
-  const [reason, setReason] = useState<ReflectionReason | null>(null);
+  const overrun = needsOverrunReflection(session);
+  const celebrating = !overrun || session.reflectionReason !== null;
+  const reason = overrun ? session.reflectionReason : null;
   return (
     <div className="decision-screen">
       <div className="decision-content result-screen">
-        <h1>{session.taskTitle}</h1>
+        <Confetti />
+        <h1>恭喜，完成啦！</h1>
+        <p className="completed-task-name">{session.taskTitle}</p>
+        {celebrating && <TaskJourney db={db} date={session.date} advance />}
         <div className="time-comparison">
           <div>
             <span>预计</span>
@@ -211,30 +232,37 @@ export function Result({
             </p>
           </div>
         </div>
-        <h2>为什么不一样？</h2>
-        <div className="reflection-grid">
-          {reflectionReasons.map((r) => (
-            <button
-              className={`choice-button ${reason === r ? "selected" : ""}`}
-              key={r}
-              aria-pressed={reason === r}
-              onClick={() => setReason(reason === r ? null : r)}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-        <button
-          className="primary full"
-          onClick={() =>
-            commit((db) =>
-              completeReflection(db, session.id, reason, Date.now()),
-            )
-          }
-        >
-          {reason ? "保存" : "跳过"}
-          <ArrowRight size={18} />
-        </button>
+        {!celebrating ? (
+          <>
+            <h2>为什么多花了时间？</h2>
+            <div className="reflection-grid">
+              {overrunReasons.map((r) => (
+                <button
+                  className="choice-button"
+                  key={r}
+                  onClick={() =>
+                    commit((current) =>
+                      chooseOverrunReason(current, session.id, r),
+                    )
+                  }
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <button
+            className="primary full"
+            onClick={() =>
+              commit((current) =>
+                completeReflection(current, session.id, reason, Date.now()),
+              )
+            }
+          >
+            回到今天
+          </button>
+        )}
       </div>
     </div>
   );
@@ -246,3 +274,4 @@ export function Loading() {
     </div>
   );
 }
+
