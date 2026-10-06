@@ -13,7 +13,7 @@ export function exportRecords() {
   );
   const link = document.createElement("a");
   link.href = url;
-  link.download = `nora-flow-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `任务小帮手-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
