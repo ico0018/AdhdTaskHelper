@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import type { Database } from "@/lib/models";
 import { dailyReflection, sessionForTask, tasksForDate } from "@/lib/flow";
 import TaskJourney from "./task-journey";
-import { pointsForDate, totalPoints } from "@/lib/points-templates";
+import { pointsForDate } from "@/lib/points-templates";
 import { BackButton, TaskIcon, formatMinutes } from "./ui";
 
 export default function DailySummary({
@@ -36,7 +36,7 @@ export default function DailySummary({
         <TaskJourney db={db} date={date} />
         <h1>{allDone ? "今天完成啦" : "今日任务"}</h1>
         <p className="child-points">
-          今天积分 {pointsForDate(db, date).total} · 总积分 {totalPoints(db)}
+          今天积分 {pointsForDate(db, date).total}
           {pointsForDate(db, date).pending > 0 ? " · 等家长确认" : ""}
         </p>
         <div className="daily-stats">
@@ -100,4 +100,3 @@ export default function DailySummary({
     </div>
   );
 }
-

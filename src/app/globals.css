@@ -2219,4 +2219,17 @@ input::placeholder {
   font-size: 18px;
   margin: 8px 0 22px;
 }
-
+.header-points {
+  flex-shrink: 0;
+  margin-left: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--yellow-light);
+  font-size: 18px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.header-points strong {
+  margin-left: 4px;
+  font-size: 22px;
+}

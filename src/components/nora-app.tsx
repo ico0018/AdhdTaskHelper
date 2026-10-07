@@ -21,7 +21,7 @@ import Parent, { exportRecords } from "./parent";
 import DailySummary from "./daily-summary";
 import Preparation from "./preparation";
 import { Focus, SelfCheck, Result, Loading } from "./session-flow";
-import { saveTemplate } from "@/lib/points-templates";
+import { saveTemplate, totalPoints } from "@/lib/points-templates";
 import { Modal } from "./ui";
 
 export default function NoraApp({
@@ -184,6 +184,14 @@ export default function NoraApp({
             </span>
             任务小帮手
           </Link>
+          {!parentMode && ready && db && (
+            <p
+              className="header-points"
+              aria-label={`总积分 ${totalPoints(db)}`}
+            >
+              积分 <strong>{totalPoints(db)}</strong>
+            </p>
+          )}
         </header>
       )}
       <main className={inFocus ? "focus-main" : "main-container"}>
@@ -240,4 +248,3 @@ export default function NoraApp({
     </div>
   );
 }
-
