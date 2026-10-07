@@ -97,12 +97,20 @@ export const sessionSchema = z.object({
   finishedAt: timestamp.nullable(),
   completedAt: timestamp.nullable(),
   preparation: preparationSchema.nullable().default(null),
+  quality: z
+    .enum(["all_correct", "within_quarter", "over_quarter"])
+    .nullable()
+    .default(null),
 });
 export const planSchema = z.object({
   id: z.string(),
   userId: z.string(),
   date,
   taskIds: z.array(z.string()),
+  dailyPenalty: z
+    .union([z.literal(-1), z.literal(0)])
+    .nullable()
+    .default(null),
   createdAt: timestamp,
 });
 export const reflectionSchema = z.object({
@@ -115,6 +123,19 @@ export const reflectionSchema = z.object({
   moreTimeTaskId: z.string().nullable(),
   createdAt: timestamp,
 });
+export const templateSchema = taskSchema
+  .pick({
+    title: true,
+    description: true,
+    type: true,
+    priority: true,
+    materials: true,
+    timeOptions: true,
+  })
+  .extend({
+    id: z.string(),
+    createdAt: timestamp,
+  });
 export const databaseSchema = z.object({
   version: z.literal(1),
   user: userSchema,
@@ -122,6 +143,8 @@ export const databaseSchema = z.object({
   sessions: z.array(sessionSchema),
   plans: z.array(planSchema),
   reflections: z.array(reflectionSchema),
+  templates: z.array(templateSchema).default([]),
+  scoringStartedOn: date.nullable().default(null),
 });
 
 export type User = z.infer<typeof userSchema>;
@@ -134,6 +157,8 @@ export type TaskType = Task["type"];
 export type StuckReason = (typeof stuckReasons)[number];
 export type ReflectionReason = (typeof reflectionReasons)[number];
 export type TaskPreparation = z.infer<typeof preparationSchema>;
+export type TaskTemplate = z.infer<typeof templateSchema>;
+export type TaskQuality = NonNullable<TaskSession["quality"]>;
 export type TaskInput = Pick<
   Task,
   "title" | "description" | "type" | "priority"

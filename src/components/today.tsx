@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, ChevronDown } from "lucide-react";
 import type { Database, Task } from "@/lib/models";
 import { sessionForTask, tasksForDate } from "@/lib/flow";
 import TaskJourney from "./task-journey";
+import { totalPoints } from "@/lib/points-templates";
 import { QuietLandscape, TaskIcon } from "./ui";
 
 export default function Today({
@@ -32,6 +33,7 @@ export default function Today({
         <QuietLandscape />
       </section>
       <TaskJourney db={db} date={date} />
+      <p className="child-points">积分 {totalPoints(db)}</p>
       <section className="task-section" aria-label="今天的任务">
         {!tasks.length ? (
           <div className="empty-state">

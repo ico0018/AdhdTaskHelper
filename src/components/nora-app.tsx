@@ -21,6 +21,7 @@ import Parent, { exportRecords } from "./parent";
 import DailySummary from "./daily-summary";
 import Preparation from "./preparation";
 import { Focus, SelfCheck, Result, Loading } from "./session-flow";
+import { saveTemplate } from "@/lib/points-templates";
 import { Modal } from "./ui";
 
 export default function NoraApp({
@@ -192,12 +193,16 @@ export default function NoraApp({
         <TaskForm
           task={form === "new" ? undefined : form}
           onClose={() => setForm(null)}
-          onSave={(input) =>
-            commit((current) =>
-              form === "new"
-                ? addTask(current, today, input, Date.now())
-                : editTask(current, form.id, input),
-            )
+          onSave={(input, saveAsTemplate) =>
+            commit((current) => {
+              const next =
+                form === "new"
+                  ? addTask(current, today, input, Date.now())
+                  : editTask(current, form.id, input);
+              return saveAsTemplate
+                ? saveTemplate(next, input, Date.now())
+                : next;
+            })
           }
         />
       )}

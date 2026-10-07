@@ -75,7 +75,7 @@ class LocalRepository implements Repository {
       ? databaseSchema.parse(JSON.parse(stored))
       : this.snapshot;
     if (!latest) throw new Error("请等待记录加载。");
-    this.persist(transform(latest));
+    this.persist(transform(ensurePlan(latest, localDate(), Date.now())));
   }
   exportData() {
     return localStorage.getItem(STORAGE_KEY) ?? "{}";
@@ -84,3 +84,4 @@ class LocalRepository implements Repository {
 
 export const repository: Repository = new LocalRepository();
 export const serverSnapshot = () => null;
+

@@ -64,24 +64,35 @@ export function createDatabase(date: string, now: number): Database {
     tasks,
     sessions: [],
     reflections: [],
+    templates: [],
+    scoringStartedOn: date,
     plans: [
       {
         id: id(),
         userId: user.id,
         date,
         taskIds: tasks.map((t) => t.id),
+        dailyPenalty: null,
         createdAt: now,
       },
     ],
   };
 }
 export function ensurePlan(db: Database, date: string, now: number): Database {
+  db = settleDailyPoints(db, date);
   if (db.plans.some((p) => p.date === date)) return db;
   return {
     ...db,
     plans: [
       ...db.plans,
-      { id: id(), userId: db.user.id, date, taskIds: [], createdAt: now },
+      {
+        id: id(),
+        userId: db.user.id,
+        date,
+        taskIds: [],
+        createdAt: now,
+        dailyPenalty: null,
+      },
     ],
   };
 }
@@ -223,6 +234,7 @@ export function startTask(
     finishedAt: null,
     completedAt: null,
     preparation,
+    quality: null,
   };
   return {
     ...db,
@@ -444,5 +456,34 @@ export function journeyForDate(db: Database, date: string) {
     );
   }).length;
   return { total: tasks.length, completed };
+}
+
+export function settleDailyPoints(db: Database, today: string): Database {
+  const start = db.scoringStartedOn ?? today;
+  let changed = db.scoringStartedOn === null;
+  const plans = db.plans.map((plan) => {
+    if (plan.date < start || plan.date >= today || plan.dailyPenalty !== null)
+      return plan;
+    const tasks = tasksForDate(db, plan.date);
+    const reachedHome = tasks.every((task) => {
+      const session = sessionForTask(db, task.id);
+      if (!session?.completed || session.completedAt === null) return false;
+      const cutoff = new Date(`${plan.date}T00:00:00`);
+      cutoff.setDate(cutoff.getDate() + 1);
+      return (
+        session.completedAt < cutoff.getTime() &&
+        (session.status === "completed" ||
+          !needsOverrunReflection(session) ||
+          session.reflectionReason !== null)
+      );
+    });
+    changed = true;
+    return {
+      ...plan,
+      dailyPenalty:
+        tasks.length > 0 && !reachedHome ? (-1 as const) : (0 as const),
+    };
+  });
+  return changed ? { ...db, scoringStartedOn: start, plans } : db;
 }
 

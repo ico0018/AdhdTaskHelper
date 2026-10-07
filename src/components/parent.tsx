@@ -6,6 +6,10 @@ import { type Database, type Task } from "@/lib/models";
 import { markReminder, sessionForTask, tasksForDate } from "@/lib/flow";
 import { repository } from "@/lib/repository";
 import { Modal, TaskIcon, formatMinutes } from "./ui";
+import ParentPointsTemplates, {
+  QualityReview,
+} from "./parent-points-templates";
+import { saveTemplate } from "@/lib/points-templates";
 
 export function exportRecords() {
   const url = URL.createObjectURL(
@@ -66,6 +70,12 @@ export default function Parent({
           添加今天的任务
         </button>
       </div>
+      <ParentPointsTemplates
+        db={db}
+        today={today}
+        date={date}
+        commit={commit}
+      />
       <div className="parent-table" role="table" aria-label="学习任务记录">
         <div className="parent-row table-head" role="row">
           <span role="columnheader">任务</span>
@@ -116,6 +126,20 @@ export default function Parent({
                 {task.materials.length ? task.materials.join("、") : "未设置"}
               </p>
               <div className="record-actions">
+                <button
+                  className="text-button compact"
+                  onClick={() =>
+                    commit((current) => {
+                      const latest = current.tasks.find(
+                        (t) => t.id === task.id,
+                      );
+                      if (!latest) throw new Error("任务不存在。");
+                      return saveTemplate(current, latest, Date.now());
+                    })
+                  }
+                >
+                  保存为模板
+                </button>
                 <label className="reminder-checkbox">
                   <input
                     type="checkbox"
@@ -156,11 +180,15 @@ export default function Parent({
                   </button>
                 </div>
               </div>
+              {session && (
+                <QualityReview db={db} session={session} commit={commit} />
+              )}
             </div>
           );
         })}
         {deletedSessions.map((s) => (
           <div key={s.id} className="parent-record">
+            <QualityReview db={db} session={s} commit={commit} />
             <div className="parent-row" role="row">
               <span role="cell">
                 {s.taskTitle}
