@@ -14,6 +14,11 @@ import { BREATH_CYCLE_MS, REQUIRED_BREATHS } from "./breathing";
 export function localDate(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
+export function millisecondsUntilMidnight(now: number): number {
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.max(1, midnight.getTime() - now);
+}
 export function id(): string {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -72,6 +77,7 @@ export function createDatabase(date: string, now: number): Database {
         userId: user.id,
         date,
         taskIds: tasks.map((t) => t.id),
+        completionBonus: 0,
         dailyPenalty: null,
         createdAt: now,
       },
@@ -90,6 +96,7 @@ export function ensurePlan(db: Database, date: string, now: number): Database {
         userId: db.user.id,
         date,
         taskIds: [],
+        completionBonus: 0,
         createdAt: now,
         dailyPenalty: null,
       },
@@ -458,6 +465,20 @@ export function journeyForDate(db: Database, date: string) {
   return { total: tasks.length, completed };
 }
 
+export function awardCompletionBonuses(db: Database): Database {
+  if (!db.scoringStartedOn) return db;
+  let changed = false;
+  const plans = db.plans.map((plan) => {
+    if (plan.date < db.scoringStartedOn! || plan.completionBonus === 2)
+      return plan;
+    const journey = journeyForDate(db, plan.date);
+    if (!journey.total || journey.completed !== journey.total) return plan;
+    changed = true;
+    return { ...plan, completionBonus: 2 as const };
+  });
+  return changed ? { ...db, plans } : db;
+}
+
 export function settleDailyPoints(db: Database, today: string): Database {
   const start = db.scoringStartedOn ?? today;
   let changed = db.scoringStartedOn === null;
@@ -486,4 +507,3 @@ export function settleDailyPoints(db: Database, today: string): Database {
   });
   return changed ? { ...db, scoringStartedOn: start, plans } : db;
 }
-

@@ -1,5 +1,10 @@
 import { databaseSchema, type Database } from "./models";
-import { createDatabase, ensurePlan, localDate } from "./flow";
+import {
+  awardCompletionBonuses,
+  createDatabase,
+  ensurePlan,
+  localDate,
+} from "./flow";
 
 export const STORAGE_KEY = "nora-flow:database:v1";
 export interface Repository {
@@ -57,7 +62,7 @@ class LocalRepository implements Repository {
     }
   };
   private persist(next: Database) {
-    const validated = databaseSchema.parse(next);
+    const validated = databaseSchema.parse(awardCompletionBonuses(next));
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
     } catch {
@@ -84,4 +89,3 @@ class LocalRepository implements Repository {
 
 export const repository: Repository = new LocalRepository();
 export const serverSnapshot = () => null;
-

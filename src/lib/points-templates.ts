@@ -4,7 +4,7 @@ import {
   type TaskInput,
   templateSchema,
 } from "./models";
-import { addTask, id, tasksForDate } from "./flow";
+import { addTask, id, journeyForDate, tasksForDate } from "./flow";
 
 export const qualityLabels: Record<TaskQuality, string> = {
   all_correct: "全对 · 2分",
@@ -40,18 +40,25 @@ export function pointsForDate(db: Database, date: string) {
   const earned = sessions.reduce(
     (sum, s) =>
       sum +
-      (s.quality === "all_correct"
-        ? 2
-        : s.quality === "within_quarter"
-          ? 1
-          : 0),
+      (s.quality === "all_correct" ? 2 : s.quality === "over_quarter" ? 0 : 1),
     0,
   );
   const penalty = db.plans.find((p) => p.date === date)?.dailyPenalty ?? 0;
+  const journey = journeyForDate(db, date);
+  const bonus =
+    db.plans.find((p) => p.date === date)?.completionBonus === 2
+      ? 2
+      : db.scoringStartedOn &&
+          date >= db.scoringStartedOn &&
+          journey.total > 0 &&
+          journey.completed === journey.total
+        ? 2
+        : 0;
   return {
     earned,
+    bonus,
     penalty,
-    total: earned + penalty,
+    total: earned + bonus + penalty,
     pending: sessions.filter((s) => s.quality === null).length,
   };
 }
@@ -109,4 +116,3 @@ export function addFromTemplate(
 export function removeTemplate(db: Database, templateId: string): Database {
   return { ...db, templates: db.templates.filter((t) => t.id !== templateId) };
 }
-

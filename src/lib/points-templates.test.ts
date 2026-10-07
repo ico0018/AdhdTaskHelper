@@ -8,6 +8,10 @@ import {
   completeReflection,
   deleteTask,
   settleDailyPoints,
+  millisecondsUntilMidnight,
+  chooseOverrunReason,
+  awardCompletionBonuses,
+  addTask,
 } from "./flow";
 import { databaseSchema } from "./models";
 import {
@@ -29,12 +33,49 @@ function completed() {
   return completeReflection(db, sid, null, now + 70_000);
 }
 describe("points and reusable task templates", () => {
+  it("adds the home bonus only after the last overdue task advances, without waiting for parent review", () => {
+    let db = createDatabase(day, now);
+    for (const task of db.tasks.slice(1)) db = deleteTask(db, task.id, now);
+    db = startTask(db, db.tasks[0].id, 10, now);
+    const sid = db.sessions[0].id;
+    db = finishWork(db, sid, now + 11 * 60_000);
+    db = completeCheck(db, sid, now + 11 * 60_000 + 1000);
+    expect(pointsForDate(db, day)).toMatchObject({
+      earned: 1,
+      bonus: 0,
+      total: 1,
+    });
+    db = chooseOverrunReason(db, sid, "比想象中难");
+    expect(pointsForDate(db, day)).toMatchObject({
+      earned: 1,
+      bonus: 2,
+      total: 3,
+    });
+    db = completeReflection(db, sid, "比想象中难", now + 11 * 60_000 + 2000);
+    expect(pointsForDate(db, day).total).toBe(3);
+    expect(
+      pointsForDate(databaseSchema.parse(JSON.parse(JSON.stringify(db))), day)
+        .total,
+    ).toBe(3);
+    db = awardCompletionBonuses(db);
+    db = addTask(
+      db,
+      day,
+      { title: "临时追加", description: "", type: "other", priority: 2 },
+      now,
+    );
+    expect(pointsForDate(db, day).bonus).toBe(2);
+    expect(awardCompletionBonuses(db).plans[0].completionBonus).toBe(2);
+  });
   it("safely reads legacy records without retroactive penalties", () => {
     const legacy = JSON.parse(JSON.stringify(completed()));
     delete legacy.templates;
     delete legacy.scoringStartedOn;
     legacy.sessions.forEach((s: Record<string, unknown>) => delete s.quality);
-    legacy.plans.forEach((p: Record<string, unknown>) => delete p.dailyPenalty);
+    legacy.plans.forEach((p: Record<string, unknown>) => {
+      delete p.dailyPenalty;
+      delete p.completionBonus;
+    });
     const db = ensurePlan(
       databaseSchema.parse(legacy),
       "2026-10-08",
@@ -45,11 +86,16 @@ describe("points and reusable task templates", () => {
     expect(db.scoringStartedOn).toBe("2026-10-08");
     expect(totalPoints(db)).toBe(0);
     expect(db.plans[0].dailyPenalty).toBeNull();
+    expect(db.plans[0].completionBonus).toBe(0);
   });
-  it("awards 2, 1 or 0 only after a parent review and never duplicates points", () => {
+  it("awards a base point immediately, then replaces it after parent review without duplication", () => {
     let db = completed();
     const sid = db.sessions[0].id;
-    expect(pointsForDate(db, day)).toMatchObject({ total: 0, pending: 1 });
+    expect(pointsForDate(db, day)).toMatchObject({
+      total: 1,
+      bonus: 0,
+      pending: 1,
+    });
     db = reviewTask(db, sid, "all_correct");
     expect(totalPoints(db)).toBe(2);
     db = reviewTask(db, sid, "all_correct");
@@ -77,7 +123,7 @@ describe("points and reusable task templates", () => {
     db = ensurePlan(db, "2026-10-08", now + 86400000);
     expect(pointsForDate(db, day).penalty).toBe(-1);
     db = ensurePlan(db, "2026-10-09", now + 2 * 86400000);
-    expect(totalPoints(db)).toBe(-1);
+    expect(totalPoints(db)).toBe(0);
     expect(pointsForDate(db, "2026-10-08").penalty).toBe(0);
     expect(settleDailyPoints(db, "2026-10-09")).toEqual(db);
     db = deleteTask(db, db.tasks[1].id, now + 2 * 86400000);
@@ -93,7 +139,45 @@ describe("points and reusable task templates", () => {
       db = completeReflection(db, sid, null, now + 140000);
     }
     db = ensurePlan(db, "2026-10-08", now + 86400000);
-    expect(pointsForDate(db, day)).toMatchObject({ penalty: 0, pending: 3 });
+    expect(pointsForDate(db, day)).toMatchObject({
+      earned: 3,
+      bonus: 2,
+      total: 5,
+      penalty: 0,
+      pending: 3,
+    });
+    const sid = db.sessions[0].id;
+    db = reviewTask(db, sid, "all_correct");
+    expect(totalPoints(db)).toBe(6);
+    db = reviewTask(db, sid, "over_quarter");
+    expect(totalPoints(db)).toBe(4);
+    expect(pointsForDate(db, day).bonus).toBe(2);
+    db = ensurePlan(
+      databaseSchema.parse(JSON.parse(JSON.stringify(db))),
+      "2026-10-08",
+      now + 86400000,
+    );
+    expect(totalPoints(db)).toBe(4);
+  });
+  it("never awards points before self-check or a home bonus for an empty plan", () => {
+    let db = createDatabase(day, now);
+    db = startTask(db, db.tasks[0].id, 20, now);
+    db = finishWork(db, db.sessions[0].id, now + 1000);
+    expect(pointsForDate(db, day)).toMatchObject({ earned: 0, bonus: 0 });
+    db = ensurePlan(db, "2026-10-08", now + 86400000);
+    expect(pointsForDate(db, "2026-10-08")).toMatchObject({
+      total: 0,
+      bonus: 0,
+    });
+  });
+  it("schedules the local 0:00 boundary and preserves a single penalty on repeated settlement", () => {
+    const before = new Date(`${day}T23:59:59.750`).getTime();
+    expect(millisecondsUntilMidnight(before)).toBe(250);
+    let db = createDatabase(day, now);
+    expect(pointsForDate(settleDailyPoints(db, day), day).penalty).toBe(0);
+    db = settleDailyPoints(db, "2026-10-08");
+    expect(pointsForDate(db, day).total).toBe(-1);
+    expect(settleDailyPoints(db, "2026-10-08")).toBe(db);
   });
   it("preserves active cross-midnight sessions and their penalty after late completion", () => {
     let db = createDatabase(day, now);
@@ -133,4 +217,3 @@ describe("points and reusable task templates", () => {
     expect(() => addFromTemplate(db, templateId, "2026-10-09", now)).toThrow();
   });
 });
-

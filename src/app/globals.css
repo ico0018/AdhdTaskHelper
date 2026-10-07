@@ -2204,6 +2204,9 @@ input::placeholder {
   display: block;
   margin-top: 14px;
 }
+.quality-submit {
+  margin-top: 12px;
+}
 .template-actions {
   display: flex;
   flex-wrap: wrap;

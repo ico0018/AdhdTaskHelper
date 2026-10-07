@@ -20,6 +20,15 @@ export function QualityReview({
   session: TaskSession;
   commit: Commit;
 }) {
+  const [draft, setDraft] = useState<{
+    sessionId: string;
+    savedQuality: TaskSession["quality"];
+    quality: TaskQuality;
+  } | null>(null);
+  const selectedQuality =
+    draft?.sessionId === session.id && draft.savedQuality === session.quality
+      ? draft.quality
+      : (session.quality ?? "");
   if (
     !session.completed ||
     !session.checkCompleted ||
@@ -28,27 +37,46 @@ export function QualityReview({
   )
     return null;
   return (
-    <label className="quality-review">
-      正确情况
-      <select
-        aria-label={`${session.taskTitle}正确情况`}
-        value={session.quality ?? ""}
-        onChange={(e) =>
-          commit((current) =>
-            reviewTask(current, session.id, e.target.value as TaskQuality),
-          )
-        }
-      >
-        <option value="" disabled>
-          待家长确认
-        </option>
-        {Object.entries(qualityLabels).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
+    <div className="quality-review">
+      <label>
+        正确情况
+        <select
+          aria-label={`${session.taskTitle}正确情况`}
+          value={selectedQuality}
+          onChange={(e) =>
+            setDraft({
+              sessionId: session.id,
+              savedQuality: session.quality,
+              quality: e.target.value as TaskQuality,
+            })
+          }
+        >
+          <option value="" disabled>
+            待家长确认
           </option>
-        ))}
-      </select>
-    </label>
+          {Object.entries(qualityLabels).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        className="secondary quality-submit"
+        disabled={!selectedQuality || selectedQuality === session.quality}
+        onClick={() => {
+          if (
+            selectedQuality &&
+            commit((current) =>
+              reviewTask(current, session.id, selectedQuality),
+            )
+          )
+            setDraft(null);
+        }}
+      >
+        提交积分修改
+      </button>
+    </div>
   );
 }
 export default function ParentPointsTemplates({
@@ -73,11 +101,12 @@ export default function ParentPointsTemplates({
           <strong>{points.total}</strong>
         </p>
         <p>
-          任务得分 {points.earned} · 未到小房子 {points.penalty}
+          任务得分 {points.earned} · 全部完成 +{points.bonus} · 未到小房子{" "}
+          {points.penalty}
           {points.pending > 0 ? ` · ${points.pending}项待确认` : ""}
         </p>
         <p className="form-note">
-          全对2分，错误不超过¼得1分，超过¼得0分。当天有任务但没到小房子，跨天后扣1分。正确情况可更正。
+          每完成一项先得1分，全部完成另加2分。检查后提交调整：全对每项2分，错误不超过¼每项1分，超过¼每项0分。当天有任务但0:00没到小房子，扣1分。
         </p>
       </section>
       <section className="parent-feature" aria-label="任务模板">
@@ -132,4 +161,3 @@ export default function ParentPointsTemplates({
     </>
   );
 }
-

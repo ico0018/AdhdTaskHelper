@@ -107,6 +107,7 @@ export const planSchema = z.object({
   userId: z.string(),
   date,
   taskIds: z.array(z.string()),
+  completionBonus: z.union([z.literal(0), z.literal(2)]).default(0),
   dailyPenalty: z
     .union([z.literal(-1), z.literal(0)])
     .nullable()
@@ -182,4 +183,3 @@ export const checkQuestions: Record<TaskType, string> = {
   organization: "明天需要的东西都带了吗？",
   other: "有没有漏掉的地方？",
 };
-

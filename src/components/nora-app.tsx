@@ -11,6 +11,7 @@ import {
   editTask,
   ensurePlan,
   localDate,
+  millisecondsUntilMidnight,
   tasksForDate,
   sessionForTask,
 } from "@/lib/flow";
@@ -68,10 +69,19 @@ export default function NoraApp({
         commit((current) => ensurePlan(current, date, Date.now()));
     };
     const interval = setInterval(updateDate, 60_000);
+    let midnightTimer: number;
+    const scheduleMidnight = () => {
+      midnightTimer = window.setTimeout(() => {
+        updateDate();
+        scheduleMidnight();
+      }, millisecondsUntilMidnight(Date.now()));
+    };
+    scheduleMidnight();
     window.addEventListener("focus", updateDate);
     return () => {
       window.clearTimeout(initialization);
       clearInterval(interval);
+      window.clearTimeout(midnightTimer);
       window.removeEventListener("focus", updateDate);
     };
   }, [commit]);
