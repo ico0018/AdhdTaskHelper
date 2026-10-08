@@ -2236,3 +2236,19 @@ input::placeholder {
   margin-left: 4px;
   font-size: 22px;
 }
+.account-panel { max-width: 1080px; margin: 8px auto; padding: 12px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; border-radius:12px; background:#f2f6f0; font-size:13px; }
+.account-panel span { flex:1 1 180px; }
+.account-panel button,.account-panel select,.account-panel a { color:inherit; padding:7px 10px; background:white; border:1px solid #d4dfd1; border-radius:8px; cursor:pointer; }
+.parent-gate { max-width:480px; margin:24px auto; padding:24px; background:white; border-radius:20px; }
+.parent-gate form,.parent-gate label { display:grid; gap:12px; }
+.parent-gate input { padding:12px; border:1px solid #ced8ca; border-radius:10px; }
+.parent-choices { display:flex; gap:12px; justify-content:center; }
+.parent-question { text-align:center; font-size:28px; font-weight:600; }
+.parent-entry { max-width:1080px; margin:auto; padding:0 20px 8px; text-align:right; font-size:13px; }
+.parent-entry a { color:#526a53; }
+.parent-record-widgets { display:grid; gap:16px; margin:20px 0; }
+.parent-record-widget { min-width:0; border:1px solid #d4dfd1; border-radius:16px; background:#fff; overflow:hidden; padding:14px; }
+.parent-record-widget h2 { margin:0 0 8px; font-size:18px; }
+.parent-record-widget iframe { width:100%; display:block; border:0; min-height:180px; }
+.widget-loading { margin:6px 0; font-size:13px; color:#647365; }
+@media(min-width:900px) { .parent-record-widgets { grid-template-columns:repeat(2,minmax(0,1fr)); } }
