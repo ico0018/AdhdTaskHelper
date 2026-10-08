@@ -16,6 +16,7 @@ export async function initializeCloud(changed: () => void) {
       changed, reload:()=>window.location.reload()
     });
     await adapter.start();
+    if (adapter.sessionUser) sessionStorage.removeItem('xbb:guest-parent-ready:v1');
     window.addEventListener('online',()=>adapter?.retry().catch(error=>adapter?.notify(error.message)));
     window.addEventListener('focus',()=>adapter?.retry().catch(error=>adapter?.notify(error.message)));
   }

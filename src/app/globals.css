@@ -2242,3 +2242,7 @@ input::placeholder {
 .parent-gate { max-width:480px; margin:24px auto; padding:24px; background:white; border-radius:20px; }
 .parent-gate form,.parent-gate label { display:grid; gap:12px; }
 .parent-gate input { padding:12px; border:1px solid #ced8ca; border-radius:10px; }
+.parent-choices { display:flex; gap:12px; justify-content:center; }
+.parent-question { text-align:center; font-size:28px; font-weight:600; }
+.parent-entry { max-width:1080px; margin:auto; padding:0 20px 8px; text-align:right; font-size:13px; }
+.parent-entry a { color:#526a53; }

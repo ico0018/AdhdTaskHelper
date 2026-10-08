@@ -1,41 +1,53 @@
 import type { Database } from './models';
 import { localDate, settleDailyPoints } from './flow';
 import { getCloud } from './account-sync';
-let unlockedUntil = 0;
 let enforce = false;
-const pinKey = 'xbb:guest-parent-pin:v1';
-const delayKey = 'xbb:guest-parent-attempts:v1';
+const guestGateKey = 'xbb:guest-parent-ready:v1';
+export interface ParentChallenge { challenge: string; question: string; choices: number[] }
+let guestChallenge: (ParentChallenge & { answer: number }) | null = null;
+const chineseDigits = ['', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
 export function enableParentProtection() { enforce = true; }
-export function parentIsUnlocked() { return Date.now() < unlockedUntil; }
-export function guestHasPin() { return !!localStorage.getItem(pinKey); }
-async function hash(pin: string, salt: string) {
-  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
-  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:210000,hash:'SHA-256'},key,256);
-  return Array.from(new Uint8Array(bits),byte=>byte.toString(16).padStart(2,'0')).join('');
+export function parentIsUnlocked() {
+  const cloud = getCloud();
+  if (cloud?.sessionUser) return cloud.parentReady;
+  return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(guestGateKey) === 'true';
 }
-export async function unlockParent(password: string, confirmation?: string) {
-  const cloud=getCloud();
-  if(cloud?.identity) {
-    await cloud.request('/api/v1/parent-unlock','POST',{password});
+export async function loadParentChallenge(): Promise<ParentChallenge> {
+  const cloud = getCloud();
+  if (cloud?.sessionUser) return await cloud.request('/api/v1/parent-challenge') as ParentChallenge;
+  const a = 2 + Math.floor(Math.random() * 8), b = 2 + Math.floor(Math.random() * 8);
+  const answer = a * b;
+  const choices = [answer, answer + a, answer - a];
+  for (let i = choices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [choices[i], choices[j]] = [choices[j], choices[i]];
+  }
+  guestChallenge = { challenge: crypto.randomUUID(), question: `${chineseDigits[a]}×${chineseDigits[b]}=?`, choices, answer };
+  return { challenge: guestChallenge.challenge, question: guestChallenge.question, choices };
+}
+export async function unlockParent(challenge: string, answer: number) {
+  const cloud = getCloud();
+  if (cloud?.sessionUser) {
+    const result = await cloud.request('/api/v1/parent-unlock', 'POST', { challenge, answer }) as { parentReady: boolean };
+    if (!result.parentReady) throw new Error('答案不正确，请再试一次。');
+    cloud.parentReady = true;
     cloud.verified = true;
+    cloud.notify();
     await cloud.flush();
   } else {
-    const attempts=JSON.parse(localStorage.getItem(delayKey)||'{"count":0,"after":0}');
-    if(attempts.after>Date.now()) throw new Error('尝试过于频繁，请稍后重试。');
-    const raw=localStorage.getItem(pinKey);
-    if(!raw) {
-      if(!/^\d{6,12}$/.test(password)||password!==confirmation) throw new Error('请设置6至12位数字PIN，并再次输入确认。');
-      const salt=crypto.randomUUID(); localStorage.setItem(pinKey,JSON.stringify({salt,hash:await hash(password,salt)}));
-    } else {
-      const saved=JSON.parse(raw);
-      if(await hash(password,saved.salt)!==saved.hash) {
-        const count=attempts.count+1; localStorage.setItem(delayKey,JSON.stringify({count,after:count>=5?Date.now()+60000:0}));
-        throw new Error('家长PIN不正确。');
-      }
-    }
-    localStorage.setItem(delayKey,JSON.stringify({count:0,after:0}));
+    if (!guestChallenge || guestChallenge.challenge !== challenge || guestChallenge.answer !== answer) throw new Error('答案不正确，请再试一次。');
+    sessionStorage.setItem(guestGateKey, 'true');
+    guestChallenge = null;
   }
-  unlockedUntil=Date.now()+14*60*1000;
+}
+export async function exitParentMode() {
+  const cloud = getCloud();
+  if (cloud?.sessionUser) {
+    await cloud.request('/api/v1/parent-lock', 'POST', {});
+    cloud.parentReady = false;
+    cloud.notify();
+  }
+  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(guestGateKey);
 }
 function protectedPart(db: Database) {
   return { tasks: db.tasks, templates: db.templates, scoringStartedOn:db.scoringStartedOn,

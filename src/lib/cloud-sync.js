@@ -11,7 +11,7 @@
     constructor(options) {
       this.options=options; this.local=options.storage; this.identity=null; this.profiles=[];
       this.status='游客 · 本机模式'; this.conflict=null; this.listeners=new Set();
-      this.busy=false; this.verified=false; this.key=null; this.identityKey=`xbb:last-identity:${options.tool}`;
+      this.busy=false; this.verified=false; this.parentReady=false; this.sessionUser=null; this.key=null; this.identityKey=`xbb:last-identity:${options.tool}`;
     }
     subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
     notify(status) { if(status) this.status=status; this.listeners.forEach(fn=>fn()); }
@@ -48,6 +48,7 @@
         if(error.status===401||error.status===403) session={user:null};
         else { session=JSON.parse(this.local.getItem(this.identityKey)||'null'); this.notify('离线模式：修改保存在本机，联网后重试'); }
       }
+      this.sessionUser=session?.user || null; this.parentReady=this.verified && session?.parentReady===true;
       if(session?.user&&session.activeProfileId) {
         this.identity={user:session.user,activeProfileId:session.activeProfileId};
         this.key=`xbb:state:v1:${this.options.tool}:${encodeURIComponent(session.user.id)}:${encodeURIComponent(session.activeProfileId)}`;
@@ -94,6 +95,7 @@
     }
     async retry() {
       const session=await this.request('/api/v1/session');
+      this.sessionUser=session.user || null; this.parentReady=session.parentReady===true; this.notify();
       if(!this.identity && !session.activeProfileId) { this.notify(session.user?'请在账号中心创建或选择孩子':'游客 · 本机模式'); return; }
       if(session.user?.id!==this.identity?.user.id||session.activeProfileId!==this.identity?.activeProfileId) {
         this.verified=false; this.notify('账号或孩子已切换，请重新打开工具；本机记录已保留'); this.options.reload?.(); return;

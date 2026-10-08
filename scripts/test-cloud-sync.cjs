@@ -71,3 +71,9 @@ test('account without child remains available without a focus reload loop',async
   let reloads=0;const ctx=setup(t,{reload:()=>reloads++});ctx.setIdentity({user:{id:'user-1'},activeProfileId:null});
   await ctx.cloud.start();await ctx.cloud.retry();assert.equal(reloads,0);assert.match(ctx.cloud.status,/选择孩子/);
 });
+
+test('parent grant follows the server session and is revoked by session refresh',async t=>{
+  const ctx=setup(t);ctx.setIdentity({user:{id:'user-1'},activeProfileId:'child-1',parentReady:true});await ctx.cloud.start();
+  assert.equal(ctx.cloud.parentReady,true);assert.equal(ctx.cloud.sessionUser.id,'user-1');
+  ctx.setIdentity({user:{id:'user-1'},activeProfileId:'child-1',parentReady:false});await ctx.cloud.retry();assert.equal(ctx.cloud.parentReady,false);
+});

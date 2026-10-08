@@ -3,7 +3,7 @@ export interface SyncRecord { revision: number; schemaVersion: number; payload: 
 export class CloudSyncAdapter {
   constructor(options: { tool: string; storage: Storage; apiBase: string; guest: () => unknown; rawGuest?: () => unknown; saveGuest: (payload: unknown) => void; validate?: (payload: unknown) => void; empty?: (payload: unknown) => boolean; reload?: () => void; changed?: () => void });
   identity: SyncIdentity | null; profiles: { id: string; nickname: string; grade?: string }[]; status: string;
-  conflict: { payload?: unknown; unavailable?: boolean } | null; key: string | null; verified: boolean;
+  conflict: { payload?: unknown; unavailable?: boolean } | null; key: string | null; verified: boolean; parentReady: boolean; sessionUser: SyncIdentity["user"] | null;
   payload: unknown; read(): SyncRecord; setPayload(payload: unknown): void;
   subscribe(fn: () => void): () => void; notify(status?: string): void;
   start(): Promise<void>; flush(): Promise<void>; retry(): Promise<void>;

@@ -47,7 +47,7 @@ export default function NoraApp({
   const [today, setToday] = useState(() => localDate());
   const commit = useCallback((transform: (db: Database) => Database) => {
     try {
-      if (parentMode && !parentIsUnlocked()) throw new Error("请重新验证家长身份。");
+      if (parentMode && !parentIsUnlocked()) throw new Error("请先打开家长页面。");
       repository.update(transform);
       setError(null);
       return true;
@@ -103,9 +103,9 @@ export default function NoraApp({
         <h1>记录暂时没有打开</h1>
         <p>{error}</p>
         {parentMode && (
-          <button className="secondary" onClick={exportRecords}>
+          <ParentGate><button className="secondary" onClick={exportRecords}>
             导出原始记录
-          </button>
+          </button></ParentGate>
         )}
         <button className="primary" onClick={() => window.location.reload()}>
           重新打开
@@ -116,7 +116,7 @@ export default function NoraApp({
     );
   else if (parentMode)
     content = (
-      <ParentGate><Parent
+      <ParentGate><AccountPanel /><Parent
         db={db}
         today={today}
         onAdd={() => setForm("new")}
@@ -208,7 +208,7 @@ export default function NoraApp({
           )}
         </header>
       )}
-      {!inFocus && ready && <AccountPanel />}
+      {!inFocus && !parentMode && <div className="parent-entry"><Link href="/parent/">家长入口</Link></div>}
       <main className={inFocus ? "focus-main" : "main-container"}>
         {content}
       </main>

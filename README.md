@@ -131,6 +131,8 @@ Next.js App Router + React + TypeScript + Tailwind CSS；纯静态输出，界�
 
 配置（公开地址，无密钥）：`NEXT_PUBLIC_ACCOUNT_API` 默认 `https://api.xuebabangbang.cn`，`NEXT_PUBLIC_ACCOUNT_PORTAL` 默认 `https://xuebabangbang.cn`，`NEXT_PUBLIC_TOOL_BASE` 默认空；隔离腾讯预览可设 `/taskhelper`，API/portal 使用同一预览 origin。必须在构建前设置，URL 末尾不要加 `/`。所有 API 请求使用 `credentials: include`，登录 Cookie 由统一 API 管理，前端不保存认证 Token。
 
-家长入口现在需要验证：账号模式调用服务端 `/api/v1/parent-unlock` 验证账号密码，服务端仍检查计划修改；界面14分钟后重新锁定。首次导入任务记录也需先解锁。游客首次由家长设6至12位数字本机PIN，PBKDF2 SHA256加随机盐，仅短时在内存解锁，连续5次错误暂时限流。游客PIN保护浏览器内日常操作，拥有浏览器开发者工具的人仍可修改本机数据；需要可信权限保护时使用账号模式。现有计时、自检、复盘、积分、任务模板逻辑保留，提醒任务启动及跨日自动结算不要求家长验证。
+家长页面 `/parent/` 用中文数字计算题（三个数字选项）防止孩子误点；游客不再配置密码或PIN，答对后在当前标签页保持家长模式，刷新不会重复答题，点击“退出家长模式”才清除。账号模式通过服务器 `/api/v1/parent-challenge` 与 `/api/v1/parent-unlock` 检查答案；服务器 `session.parentReady` 随当前登录持续有效，切工具、刷新或超过15分钟均不重复验证，退出登录或明确退出家长模式才结束。算术是家长误点确认，账号登录、管理员权限与孩子数据所有权仍由服务端验证。
+
+学生页只提供简洁“家长入口”，不显示本机/云同步状态、导入、导出、冲突选择或孩子管理。所有记录操作放在同origin家长页面并在通过计算题后显示；账号中心可直接进入各工具家长页面。后台自动同步、离线待上传、revision冲突保存及原始学习流程保持。家长页可“换一道题”或网络失败后重试。
 
 检查：`npm run test:cloud`（离线重试、刷新恢复、迁移确认/冲突、revision、孩子/账号隔离、写入竞态、存储额度）和 `npm test`（原核心+家长边界）、`npm run lint`、`npm run typecheck`、`npm run build`。本地若 Next 仅安装在 checkout 父目录，Turbopack 的根目录隔离可能拒绝解析；可用 `npm run build -- --webpack` 验证导出，独立部署应在本仓库执行 `npm ci`。
