@@ -38,14 +38,16 @@ describe('parent permission boundary',()=>{
   it('uses the server session grant for signed-in parents and locks when it is revoked',async()=>{
     const cloud={sessionUser:{id:'parent'},parentReady:false,verified:true,request:vi.fn(async(path:string,method?:string,body?:unknown)=>{
       if(path==='/api/v1/parent-challenge')return {challenge:'signed',question:'贰×捌=?',choices:[14,16,18]};
-      if(path==='/api/v1/parent-unlock') {expect(method).toBe('POST');expect(body).toEqual({challenge:'signed',answer:16});return {parentReady:true};}
+      if(path==='/api/v1/parent-unlock') {if ((body as {answer:number}).answer!==16) throw Object.assign(new Error('请求失败 (400)'),{status:400});expect(method).toBe('POST');expect(body).toEqual({challenge:'signed',answer:16});return {parentReady:true};}
       if(path==='/api/v1/parent-lock')return {};
       throw new Error('unexpected request');
     }),notify:vi.fn(),flush:vi.fn(async()=>{})};
     sessionValues.set('xbb:guest-parent-ready:v1','true');
     vi.doMock('./account-sync',()=>({getCloud:()=>cloud}));
     const auth=await import('./parent-auth');expect(auth.parentIsUnlocked()).toBe(false);
-    const challenge=await auth.loadParentChallenge();await auth.unlockParent(challenge.challenge,16);expect(auth.parentIsUnlocked()).toBe(true);
+    const challenge=await auth.loadParentChallenge();await expect(auth.unlockParent(challenge.challenge,14)).rejects.toThrow('答案不正确或题目已过期');
+    cloud.request.mockRejectedValueOnce({status:429});await expect(auth.unlockParent(challenge.challenge,16)).rejects.toThrow('一分钟后重试');
+    await auth.unlockParent(challenge.challenge,16);expect(auth.parentIsUnlocked()).toBe(true);
     cloud.parentReady=false;expect(auth.parentIsUnlocked()).toBe(false);
     cloud.parentReady=true;await auth.exitParentMode();expect(auth.parentIsUnlocked()).toBe(false);expect(sessionValues.size).toBe(0);
   });

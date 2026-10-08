@@ -28,7 +28,14 @@ export async function loadParentChallenge(): Promise<ParentChallenge> {
 export async function unlockParent(challenge: string, answer: number) {
   const cloud = getCloud();
   if (cloud?.sessionUser) {
-    const result = await cloud.request('/api/v1/parent-unlock', 'POST', { challenge, answer }) as { parentReady: boolean };
+    let result: { parentReady: boolean };
+    try { result = await cloud.request('/api/v1/parent-unlock', 'POST', { challenge, answer }) as { parentReady: boolean }; }
+    catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (status === 400) throw new Error('答案不正确或题目已过期，请换一道题。');
+      if (status === 429) throw new Error('操作频繁，请一分钟后重试。');
+      throw error;
+    }
     if (!result.parentReady) throw new Error('答案不正确，请再试一次。');
     cloud.parentReady = true;
     cloud.verified = true;
