@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "任务小帮手",
   description: "学习任务、材料准备与专注计时。",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: `${process.env.NEXT_PUBLIC_TOOL_BASE || ""}/icon.svg` },
 };
 export const viewport: Viewport = {
   width: "device-width",
