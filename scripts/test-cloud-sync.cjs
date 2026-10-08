@@ -60,3 +60,14 @@ test('quota failure leaves last readable payload untouched',async t=>{
 test('guest focus retry remains on the same page',async t=>{
   let reloads=0; const ctx=setup(t,{reload:()=>reloads++}); ctx.setIdentity({user:null,activeProfileId:null}); await ctx.cloud.start(); await ctx.cloud.retry(); assert.equal(reloads,0);
 });
+
+test('JSONB object key order does not create changes or false conflict',async t=>{
+  const ctx=setup(t); ctx.setRemote({revision:1,schemaVersion:1,payload:{z:1,a:{y:2,b:3}}}); await ctx.cloud.start();
+  ctx.cloud.setPayload({a:{b:3,y:2},z:1}); assert.equal(ctx.cloud.read().dirty,false);
+  ctx.cloud.setPayload({a:{b:3,y:2},z:4}); ctx.setRemote({revision:2,schemaVersion:1,payload:{z:4,a:{y:2,b:3}}}); await ctx.cloud.retry();
+  assert.equal(ctx.cloud.conflict,null); assert.equal(ctx.cloud.read().dirty,false);
+});
+test('account without child remains available without a focus reload loop',async t=>{
+  let reloads=0;const ctx=setup(t,{reload:()=>reloads++});ctx.setIdentity({user:{id:'user-1'},activeProfileId:null});
+  await ctx.cloud.start();await ctx.cloud.retry();assert.equal(reloads,0);assert.match(ctx.cloud.status,/选择孩子/);
+});

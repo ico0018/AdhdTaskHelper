@@ -1,6 +1,12 @@
 /* Standalone sync engine; stores learning data, never authentication tokens. */
 (function(root) {
   'use strict';
+  const canonical = value => JSON.stringify(normalize(value));
+  function normalize(value) {
+    if(Array.isArray(value)) return value.map(normalize);
+    if(value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key,normalize(value[key])]));
+    return value;
+  }
   class CloudSyncAdapter {
     constructor(options) {
       this.options=options; this.local=options.storage; this.identity=null; this.profiles=[];
@@ -29,7 +35,7 @@
     setPayload(payload) {
       if(!this.identity) { this.options.saveGuest(payload); return; }
       const previous=this.read();
-      if(JSON.stringify(previous.payload)===JSON.stringify(payload)) return;
+      if(canonical(previous.payload)===canonical(payload)) return;
       this.persist({...previous,payload,dirty:true,generation:previous.generation+1});
       this.notify(this.conflict?'同步冲突：本机修改已保留':'本机已保存，等待云同步');
       clearTimeout(this.timer); this.timer=setTimeout(()=>this.flush(),700);
@@ -61,7 +67,7 @@
       if(local.conflict) { this.conflict=remote; this.persist({...local,conflict:true}); this.notify('同步冲突：请导出并选择保留哪份记录'); return; }
       this.conflict=null;
       if(local.dirty&&remote.revision!==local.revision) {
-        if(JSON.stringify(remote.payload)===JSON.stringify(local.payload)) this.persist({...local,revision:remote.revision,dirty:false});
+        if(canonical(remote.payload)===canonical(local.payload)) this.persist({...local,revision:remote.revision,dirty:false});
         else { this.conflict=remote; this.persist({...local,conflict:true}); this.notify('同步冲突：请导出并选择保留哪份记录'); return; }
       } else if(!local.dirty) this.persist({...local,...remote,dirty:false});
       this.notify(this.read().dirty?'本机已保存，等待云同步':'云同步已完成'); await this.flush();
@@ -87,12 +93,12 @@
     }
     async retry() {
       const session=await this.request('/api/v1/session');
-      if(!this.identity && !session.user) { this.notify('游客 · 本机模式'); return; }
+      if(!this.identity && !session.activeProfileId) { this.notify(session.user?'请在账号中心创建或选择孩子':'游客 · 本机模式'); return; }
       if(session.user?.id!==this.identity?.user.id||session.activeProfileId!==this.identity?.activeProfileId) {
         this.verified=false; this.notify('账号或孩子已切换，请重新打开工具；本机记录已保留'); this.options.reload?.(); return;
       }
-      const before=JSON.stringify(this.payload); this.verified=true; await this.pull();
-      if(before!==JSON.stringify(this.payload)) this.options.changed?.();
+      const before=canonical(this.payload); this.verified=true; await this.pull();
+      if(before!==canonical(this.payload)) this.options.changed?.();
     }
     async migrateGuest() {
       if(!this.identity||!this.verified) throw new Error('请先连接账号并选择孩子');
