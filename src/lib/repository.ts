@@ -6,11 +6,15 @@ import {
   localDate,
 } from "./flow";
 
+import { getCloud, initializeCloud } from "./account-sync";
+import { assertParentMutation, enableParentProtection } from "./parent-auth";
+
 export const STORAGE_KEY = "nora-flow:database:v1";
 export interface Repository {
   getSnapshot(): Database | null;
   subscribe(listener: () => void): () => void;
   initialize(): void;
+  initializeAccount(): Promise<void>;
   update(transform: (db: Database) => Database): void;
   exportData(): string;
 }
@@ -30,8 +34,17 @@ class LocalRepository implements Repository {
   private emit() {
     this.listeners.forEach((listener) => listener());
   }
+  async initializeAccount() {
+    await initializeCloud(() => this.initialize());
+    enableParentProtection();
+    this.initialize();
+  }
+  private readRaw() {
+    const cloud = getCloud();
+    return cloud?.identity ? (cloud.payload ? JSON.stringify(cloud.payload) : null) : localStorage.getItem(STORAGE_KEY);
+  }
   initialize() {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = this.readRaw();
     let loaded: Database;
     try {
       loaded = stored
@@ -42,6 +55,11 @@ class LocalRepository implements Repository {
         "本机记录暂时无法读取。原始数据已保留，请在家长页面导出原始记录后再检查。",
       );
     }
+    if (!stored && getCloud()?.identity) {
+      const cloud = getCloud()!;
+      const profile = cloud.profiles.find(candidate => candidate.id === cloud.identity!.activeProfileId);
+      loaded = { ...loaded, tasks: [], plans: [], user: { ...loaded.user, id: cloud.identity!.activeProfileId, name: profile?.nickname || "孩子" } };
+    }
     const next = ensurePlan(loaded, localDate(), Date.now());
     this.persist(next);
     if (!this.listening) {
@@ -50,7 +68,8 @@ class LocalRepository implements Repository {
     }
   }
   private handleStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY || !event.newValue) return;
+    if (getCloud()?.identity && event.key === getCloud()?.key) { this.initialize(); return; }
+    if (getCloud()?.identity || event.key !== STORAGE_KEY || !event.newValue) return;
     try {
       const parsed = databaseSchema.safeParse(JSON.parse(event.newValue));
       if (parsed.success) {
@@ -64,7 +83,9 @@ class LocalRepository implements Repository {
   private persist(next: Database) {
     const validated = databaseSchema.parse(awardCompletionBonuses(next));
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
+      const cloud = getCloud();
+      if (cloud?.identity) cloud.setPayload(validated);
+      else localStorage.setItem(STORAGE_KEY, JSON.stringify(validated));
     } catch {
       throw new Error(
         "这次记录没有保存。请检查浏览器是否允许本机存储，或先导出历史记录腾出空间，再重试。",
@@ -75,15 +96,17 @@ class LocalRepository implements Repository {
   }
   update(transform: (db: Database) => Database) {
     // Read the latest committed data before a mutation, including another tab's changes.
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = this.readRaw();
     const latest = stored
       ? databaseSchema.parse(JSON.parse(stored))
       : this.snapshot;
     if (!latest) throw new Error("请等待记录加载。");
-    this.persist(transform(ensurePlan(latest, localDate(), Date.now())));
+    const next = transform(ensurePlan(latest, localDate(), Date.now()));
+    assertParentMutation(latest, next);
+    this.persist(next);
   }
   exportData() {
-    return localStorage.getItem(STORAGE_KEY) ?? "{}";
+    return this.readRaw() ?? "{}";
   }
 }
 

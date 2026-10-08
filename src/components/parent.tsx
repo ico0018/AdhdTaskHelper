@@ -238,7 +238,7 @@ export default function Parent({
       </p>
       <div className="parent-bottom">
         <p>
-          记录只保存在当前设备的浏览器里。
+          记录即时保存在本机，登录后自动尝试云同步。
           <br />
           换设备前，可以导出一份备份。
         </p>

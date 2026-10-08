@@ -2236,3 +2236,9 @@ input::placeholder {
   margin-left: 4px;
   font-size: 22px;
 }
+.account-panel { max-width: 1080px; margin: 8px auto; padding: 12px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; border-radius:12px; background:#f2f6f0; font-size:13px; }
+.account-panel span { flex:1 1 180px; }
+.account-panel button,.account-panel select,.account-panel a { color:inherit; padding:7px 10px; background:white; border:1px solid #d4dfd1; border-radius:8px; cursor:pointer; }
+.parent-gate { max-width:480px; margin:24px auto; padding:24px; background:white; border-radius:20px; }
+.parent-gate form,.parent-gate label { display:grid; gap:12px; }
+.parent-gate input { padding:12px; border:1px solid #ced8ca; border-radius:10px; }

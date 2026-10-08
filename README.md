@@ -122,3 +122,15 @@ Next.js App Router + React + TypeScript + Tailwind CSS；纯静态输出，界�
 旧localStorage键和version:1保留，通过schema默认值补充 templates=[]、scoringStartedOn=null、session.quality=null、plan.dailyPenalty=null、plan.completionBonus=0。已有任务、家长评分和每日扣分保留；已启用积分的记录按新基础分及奖励规则计算，未启用前的历史不计分。没有自动清空、账号、云同步或额外依赖。
 
 积分测试覆盖旧数据兼容、完成即发基础分、2/1/0分更正且不重复计分、自检前不得分、全部完成额外2分及家长调整保留奖励、超时先选原因再发奖励、0:00边界与单次扣分、空日无奖励或扣分、跨午夜session保留，以及模板复制、重复导入和删除隔离。
+
+## 统一账号与云同步（开发分支）
+
+游客仍使用原有浏览器记录，无需登录。登录时不会自动把游客记录归入孩子：在每个工具原来的域名打开工具、选择孩子，再点“导入本机记录”确认。账号与孩子缓存以 `xbb:state:v1:taskhelper:<userId>:<profileId>` 隔离；旧 `nora-flow:database:v1` 记录保留。新孩子初始是空任务计划，不复用游客示例任务。
+
+`LocalRepository + CloudSyncAdapter` 保留原有 Repository 和业务模型。当前完整 `Database` 作为 schemaVersion 1 的 JSON payload。本机写入即时保存，持久 dirty/generation 即 outbox；在线自动重试、返回页面时检查统一 Session 与当前孩子。服务端 revision 409 会停写并显示选择，导出含本机、冲突云端及游客记录；明确选择前不会覆盖。选择时另外保留 `:recovery:<timestamp>` 恢复副本。换孩子后重载，未同步记录仍属于原孩子。
+
+配置（公开地址，无密钥）：`NEXT_PUBLIC_ACCOUNT_API` 默认 `https://api.xuebabangbang.cn`，`NEXT_PUBLIC_ACCOUNT_PORTAL` 默认 `https://xuebabangbang.cn`，`NEXT_PUBLIC_TOOL_BASE` 默认空；隔离腾讯预览可设 `/taskhelper`，API/portal 使用同一预览 origin。必须在构建前设置，URL 末尾不要加 `/`。所有 API 请求使用 `credentials: include`，登录 Cookie 由统一 API 管理，前端不保存认证 Token。
+
+家长入口现在需要验证：账号模式调用服务端 `/api/v1/parent-unlock` 验证账号密码，服务端仍检查计划修改；界面14分钟后重新锁定。首次导入任务记录也需先解锁。游客首次由家长设6至12位数字本机PIN，PBKDF2 SHA256加随机盐，仅短时在内存解锁，连续5次错误暂时限流。游客PIN保护浏览器内日常操作，拥有浏览器开发者工具的人仍可修改本机数据；需要可信权限保护时使用账号模式。现有计时、自检、复盘、积分、任务模板逻辑保留，提醒任务启动及跨日自动结算不要求家长验证。
+
+检查：`npm run test:cloud`（离线重试、刷新恢复、迁移确认/冲突、revision、孩子/账号隔离、写入竞态、存储额度）和 `npm test`（原核心+家长边界）、`npm run lint`、`npm run typecheck`、`npm run build`。本地若 Next 仅安装在 checkout 父目录，Turbopack 的根目录隔离可能拒绝解析；可用 `npm run build -- --webpack` 验证导出，独立部署应在本仓库执行 `npm ci`。

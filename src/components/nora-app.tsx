@@ -16,6 +16,9 @@ import {
   sessionForTask,
 } from "@/lib/flow";
 import { repository, serverSnapshot } from "@/lib/repository";
+import AccountPanel from "./account-panel";
+import ParentGate from "./parent-gate";
+import { parentIsUnlocked } from "@/lib/parent-auth";
 import Today from "./today";
 import TaskForm from "./task-form";
 import Parent, { exportRecords } from "./parent";
@@ -44,6 +47,7 @@ export default function NoraApp({
   const [today, setToday] = useState(() => localDate());
   const commit = useCallback((transform: (db: Database) => Database) => {
     try {
+      if (parentMode && !parentIsUnlocked()) throw new Error("请重新验证家长身份。");
       repository.update(transform);
       setError(null);
       return true;
@@ -51,11 +55,11 @@ export default function NoraApp({
       setError(caught instanceof Error ? caught.message : "保存失败，请重试。");
       return false;
     }
-  }, []);
+  }, [parentMode]);
   useEffect(() => {
-    const initialization = window.setTimeout(() => {
+    const initialization = window.setTimeout(async () => {
       try {
-        repository.initialize();
+        await repository.initializeAccount();
         setReady(true);
         setError(null);
       } catch (caught) {
@@ -112,14 +116,14 @@ export default function NoraApp({
     );
   else if (parentMode)
     content = (
-      <Parent
+      <ParentGate><Parent
         db={db}
         today={today}
         onAdd={() => setForm("new")}
         onEdit={setForm}
         onDelete={setRemove}
         commit={commit}
-      />
+      /></ParentGate>
     );
   else if (session?.status === "focusing")
     content = <Focus key={session.id} session={session} commit={commit} />;
@@ -204,10 +208,11 @@ export default function NoraApp({
           )}
         </header>
       )}
+      {!inFocus && ready && <AccountPanel />}
       <main className={inFocus ? "focus-main" : "main-container"}>
         {content}
       </main>
-      {parentMode && form && (
+      {parentMode && parentIsUnlocked() && form && (
         <TaskForm
           task={form === "new" ? undefined : form}
           onClose={() => setForm(null)}
@@ -224,7 +229,7 @@ export default function NoraApp({
           }
         />
       )}
-      {parentMode && remove && (
+      {parentMode && parentIsUnlocked() && remove && (
         <Modal title="移出计划？" onClose={() => setRemove(null)}>
           <p className="delete-description">{remove.title}</p>
           <div className="modal-actions">

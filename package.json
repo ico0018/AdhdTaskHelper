@@ -8,7 +8,8 @@
     "preview": "serve out -l 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:cloud": "node scripts/test-cloud-sync.cjs ../src/lib/cloud-sync.js"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
