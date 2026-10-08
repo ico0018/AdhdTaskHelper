@@ -36,7 +36,8 @@
       if(!this.identity) { this.options.saveGuest(payload); return; }
       const previous=this.read();
       if(canonical(previous.payload)===canonical(payload)) return;
-      this.persist({...previous,payload,dirty:true,generation:previous.generation+1});
+      try { this.persist({...previous,payload,dirty:true,generation:previous.generation+1}); }
+      catch(error) { this.notify('本机保存失败，尚未同步：请检查存储空间并导出备份'); throw error; }
       this.notify(this.conflict?'同步冲突：本机修改已保留':'本机已保存，等待云同步');
       clearTimeout(this.timer); this.timer=setTimeout(()=>this.flush(),700);
     }

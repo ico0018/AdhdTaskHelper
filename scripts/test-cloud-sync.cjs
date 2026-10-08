@@ -55,7 +55,7 @@ test('modifications during an upload retain dirty flag and updated content',asyn
 });
 test('quota failure leaves last readable payload untouched',async t=>{
   const ctx=setup(t); await ctx.cloud.start(); ctx.cloud.setPayload({safe:true}); const previous=ctx.local.setItem; ctx.local.setItem=()=>{throw new Error('quota');};
-  assert.throws(()=>ctx.cloud.setPayload({unsafe:true}),/quota/); assert.deepEqual(ctx.cloud.payload,{safe:true}); ctx.local.setItem=previous;
+  assert.throws(()=>ctx.cloud.setPayload({unsafe:true}),/quota/); assert.deepEqual(ctx.cloud.payload,{safe:true}); assert.match(ctx.cloud.status,/保存失败/); ctx.local.setItem=previous;
 });
 test('guest focus retry remains on the same page',async t=>{
   let reloads=0; const ctx=setup(t,{reload:()=>reloads++}); ctx.setIdentity({user:null,activeProfileId:null}); await ctx.cloud.start(); await ctx.cloud.retry(); assert.equal(reloads,0);
