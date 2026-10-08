@@ -17,6 +17,7 @@ import {
 } from "@/lib/flow";
 import { repository, serverSnapshot } from "@/lib/repository";
 import AccountPanel from "./account-panel";
+import ParentRecordWidgets from "./parent-record-widgets";
 import ParentGate from "./parent-gate";
 import { parentIsUnlocked } from "@/lib/parent-auth";
 import Today from "./today";
@@ -123,6 +124,7 @@ export default function NoraApp({
         onEdit={setForm}
         onDelete={setRemove}
         commit={commit}
+        recordControls={<ParentRecordWidgets />}
       /></ParentGate>
     );
   else if (session?.status === "focusing")

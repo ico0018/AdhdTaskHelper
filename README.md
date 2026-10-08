@@ -136,3 +136,8 @@ Next.js App Router + React + TypeScript + Tailwind CSS；纯静态输出，界�
 学生页只提供简洁“家长入口”，不显示本机/云同步状态、导入、导出、冲突选择或孩子管理。所有记录操作放在同origin家长页面并在通过计算题后显示；账号中心可直接进入各工具家长页面。后台自动同步、离线待上传、revision冲突保存及原始学习流程保持。家长页可“换一道题”或网络失败后重试。
 
 检查：`npm run test:cloud`（离线重试、刷新恢复、迁移确认/冲突、revision、孩子/账号隔离、写入竞态、存储额度）和 `npm test`（原核心+家长边界）、`npm run lint`、`npm run typecheck`、`npm run build`。本地若 Next 仅安装在 checkout 父目录，Turbopack 的根目录隔离可能拒绝解析；可用 `npm run build -- --webpack` 验证导出，独立部署应在本仓库执行 `npm ci`。
+
+
+统一家长页直接展示汉字和古文的记录控件，位于“添加今天的任务”下方。两个紧凑iframe分别读取原工具origin的 `parent.html?embedded=1`，保留原localStorage、显式导入和冲突确认。公开构建地址 `NEXT_PUBLIC_HANZI_URL`、`NEXT_PUBLIC_GUWEN_URL` 默认是对应正式工具域名，隔离预览分别设为 `http://localhost:8321`、`http://localhost:8322`。
+
+iframe只接收已配置工具origin、对应contentWindow的ready/有限整数高度消息；父页面只在游客本机计算题通过后发送无数据的activate，登录用户直接继承服务器当前Session，不会通过消息授予权限。中央退出发送无数据deactivate；中央切孩子按原逻辑重载全部面板。记录内容、孩子/账号ID和任意URLs都不参与跨窗口消息，工具面板加载失败提供重试。Vitest别名配置与SSR布局/消息边界测试验证任务标题与添加按钮顺序及消息限制。

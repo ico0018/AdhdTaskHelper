@@ -51,9 +51,10 @@ export async function exitParentMode() {
   const cloud = getCloud();
   if (cloud?.sessionUser) {
     await cloud.request('/api/v1/parent-lock', 'POST', {});
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('xbb:parent-exit'));
     cloud.parentReady = false;
     cloud.notify();
-  }
+  } else if (typeof window !== 'undefined') window.dispatchEvent(new Event('xbb:parent-exit'));
   if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(guestGateKey);
 }
 function protectedPart(db: Database) {

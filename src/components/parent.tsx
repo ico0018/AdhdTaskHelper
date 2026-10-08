@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Check, Download, Pencil, Plus, Trash2 } from "lucide-react";
 import { type Database, type Task } from "@/lib/models";
 import { markReminder, sessionForTask, tasksForDate } from "@/lib/flow";
@@ -29,6 +29,7 @@ export default function Parent({
   onEdit,
   onDelete,
   commit,
+  recordControls,
 }: {
   db: Database;
   today: string;
@@ -36,6 +37,7 @@ export default function Parent({
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   commit: (transform: (db: Database) => Database) => boolean;
+  recordControls?: ReactNode;
 }) {
   const [date, setDate] = useState(today);
   const [details, setDetails] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export default function Parent({
           添加今天的任务
         </button>
       </div>
+      {recordControls}
       <ParentPointsTemplates
         db={db}
         today={today}
