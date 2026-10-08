@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCloud } from '@/lib/account-sync';
 import { parentIsUnlocked } from '@/lib/parent-auth';
-import { trustedWidgetSignal } from '@/lib/parent-widget';
+import { parentWidgetUrl, trustedWidgetSignal } from '@/lib/parent-widget';
 const tools = [
   { key: 'hanzi', name: '汉字乐园', base: process.env.NEXT_PUBLIC_HANZI_URL || 'https://hanzi.xuebabangbang.cn' },
   { key: 'guwen', name: '古文乐园', base: process.env.NEXT_PUBLIC_GUWEN_URL || 'https://guwen.xuebabangbang.cn' },
@@ -13,7 +13,7 @@ function RecordWidget({ name, base }: { name: string; base: string }) {
   const [version, setVersion] = useState(0);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const frameUrl = new URL('/parent.html?embedded=1', base);
+  const frameUrl = parentWidgetUrl(base);
   const origin = frameUrl.origin;
   useEffect(() => {
     const receive = (event: MessageEvent) => {
